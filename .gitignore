@@ -17,8 +17,10 @@ data/processed/
 data/db/
 data/backfill_progress.json
 
-# Alembic
-alembic/versions/*.pyc
+# Node / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
 
 # OS / Editor
 .DS_Store

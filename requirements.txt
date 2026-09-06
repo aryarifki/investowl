@@ -1,9 +1,29 @@
+# Backend Core
 fastapi
 uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+alembic
 pydantic
 pydantic-settings
 python-jose
 passlib
 bcrypt
-python-multipart
-alembic
+redis
+celery
+
+# Data & ML
+pandas
+yfinance
+httpx
+playwright
+beautifulsoup4
+python-dotenv
+tqdm
+matplotlib
+seaborn
+statsmodels
+scikit-learn
+
+# Frontend (dikelola via npm di folder /frontend)
+# next, react, tailwindcss, dll.
