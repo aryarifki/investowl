@@ -1,5 +1,26 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment & Secrets
 .env
+debug/
+browser_session/
+
+# Data Lokal & Database
+data/raw/
+data/processed/
+data/db/
+data/backfill_progress.json
+
+# Alembic
 alembic/versions/*.pyc
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
