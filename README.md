@@ -54,7 +54,7 @@ investowl/
 ### 1. Persiapan Awal
 Kloning repositori ke mesin lokal Anda:
 ```bash
-git clone <url-repo-anda>
+git clone <url>
 cd investowl
 ```
 
@@ -95,4 +95,4 @@ python backfill_monthly.py
 ```
 
 ## 📄 Lisensi
-Distribusi dan hak cipta diatur dalam dokumen [LICENSE](LICENSE) yang terlampir pada repositori ini.
+Distribusi dan hak cipta diatur dalam dokumen [LICENSE](LICENSE)
