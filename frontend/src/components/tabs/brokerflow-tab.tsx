@@ -1,9 +1,9 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import useSWR from "swr";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, BarChart, Bar, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { fmtRp, fmtPct, signedColor } from "@/components/metric-card";
-import { CaretDown, Check } from "@phosphor-icons/react";
+import { CaretDown, Check, Plus, X } from "@phosphor-icons/react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -38,22 +38,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
 
   const paths = data?.broker_distribution?.paths || [];
   
-  const sankeyData = useMemo(() => {
-    if (paths.length === 0) return [];
-    const buyerTotals: { [key: string]: number } = {};
-    const sellerTotals: { [key: string]: number } = {};
-    
-    paths.forEach((p: any) => {
-      buyerTotals[p.buyer_code] = (buyerTotals[p.buyer_code] || 0) + p.matched_value;
-      sellerTotals[p.seller_code] = (sellerTotals[p.seller_code] || 0) + p.matched_value;
-    });
-    
-    const buyers = Object.entries(buyerTotals).map(([code, val]) => ({ code, val, type: "Buyer" }));
-    const sellers = Object.entries(sellerTotals).map(([code, val]) => ({ code, val, type: "Seller" }));
-    
-    return [...buyers, ...sellers].sort((a, b) => b.val - a.val);
-  }, [paths]);
-
   useEffect(() => {
     if (data?.available_dist_dates && data.available_dist_dates.length > 0 && !distDate) {
       const latest = data.available_dist_dates[data.available_dist_dates.length - 1];
@@ -103,7 +87,8 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     }
   };
 
-  const activityData = data.broker_distribution?.dist || [];
+  // Prepare chart data for Broker Compare
+  const activityData = data.activity_data || [];
   let chartData: any[] = [];
   
   if (activityData.length > 0 && selectedBrokers.length > 0) {
@@ -147,6 +132,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
       {/* Broker Drill-Down */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
         <h3 className="text-sm font-bold mb-3">Broker Drill-Down</h3>
+        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div>
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Compare Mode</label>
@@ -233,30 +219,53 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
               <option value="Daily">Daily</option>
             </select>
           </div>
+          
+          {/* Broker Chips */}
+          <div className="col-span-3">
+            <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Selected Brokers</label>
+            <div className="flex flex-wrap gap-2 items-center min-h-[38px]">
+              {selectedBrokers.map(code => (
+                <div key={code} className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-mono font-bold">
+                  {code}
+                  <button onClick={() => handleBrokerToggle(code)} className="hover:text-red-500">
+                    <X size={12} weight="bold" />
+                  </button>
+                </div>
+              ))}
+              {selectedBrokers.length === 0 && (
+                <span className="text-xs text-neutral-400">No brokers selected</span>
+              )}
+            </div>
+          </div>
         </div>
+        
         <p className="text-xs text-neutral-500 mb-3">
           Cumulative mode sums broker net flow across the selected broker window. Daily mode shows each date separately.
         </p>
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-              <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} />
-              <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
-              {selectedBrokers.map((broker: string) => (
-                <Line
-                  key={broker}
-                  type="monotone"
-                  dataKey={broker}
-                  stroke={`hsl(${Math.random() * 360}, 70%, 50%)`}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
+                <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} />
+                <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
+                {selectedBrokers.map((broker: string) => (
+                  <Line
+                    key={broker}
+                    type="monotone"
+                    dataKey={broker}
+                    stroke={`hsl(${Math.random() * 360}, 70%, 50%)`}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-sm text-neutral-400">No data to display</div>
+          )}
         </div>
       </div>
 
@@ -392,24 +401,25 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
             )}
           </div>
 
-          {/* Broker Distribution Paths (Sankey Alternative) */}
+          {/* Estimated Counterparties List */}
           {paths.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Estimated Matching Paths</h4>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sankeyData} layout="vertical" margin={{ top: 5, right: 5, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} stroke="#94a3b8" />
-                    <YAxis dataKey="code" type="category" tick={{ fontSize: 10, fill: "#94a3b8" }} stroke="#94a3b8" width={40} />
-                    <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} formatter={(value: any) => fmtRp(value)} />
-                    <Bar dataKey="val" name="Value" radius={[0, 4, 4, 0]}>
-                      {sankeyData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.type === "Buyer" ? "#10b981" : "#f43f5e"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Estimated Counterparties</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                {paths.map((p: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-xs bg-neutral-50 dark:bg-neutral-800 p-2 rounded border border-neutral-200 dark:border-neutral-700">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono font-bold">{p.buyer_code}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded text-white" style={{ backgroundColor: participant_color(p.buyer_type) }}>{p.buyer_type}</span>
+                    </div>
+                    <span className="text-neutral-400">→</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono font-bold">{p.seller_code}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded text-white" style={{ backgroundColor: participant_color(p.seller_type) }}>{p.seller_type}</span>
+                    </div>
+                    <span className="ml-auto font-mono font-bold" style={{ color: signedColor(p.matched_value) }}>{fmtRp(p.matched_value)}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
