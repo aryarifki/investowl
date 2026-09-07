@@ -1,9 +1,9 @@
 "use client";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { fmtRp, fmtPct, signedColor } from "@/components/metric-card";
-import { CaretDown, Check, Plus, X } from "@phosphor-icons/react";
+import { CaretDown, Check, X, MagnifyingGlass } from "@phosphor-icons/react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -17,7 +17,6 @@ function participant_color(label: string): string {
 
 export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDays: number }) {
   const [compareMode, setCompareMode] = useState(true);
-  const [maxBrokers, setMaxBrokers] = useState(5);
   const [selectedBrokers, setSelectedBrokers] = useState<string[]>([]);
   const [flowMode, setFlowMode] = useState("Cumulative");
   const [selectedProfile, setSelectedProfile] = useState("All Profiles");
@@ -28,24 +27,28 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
   const [distEnd, setDistEnd] = useState("");
   
   const [brokerDropdownOpen, setBrokerDropdownOpen] = useState(false);
+  const [searchBroker, setSearchBroker] = useState("");
   const brokerDropdownRef = useRef<HTMLDivElement>(null);
 
-  const qs = `?lookback_days=${windowDays}`;
+  // Construct dynamic SWR URL to fetch new distribution data when dates change
+  const distParams = distMode === "Single day"
+    ? (distDate ? `&dist_start=${distDate}&dist_end=${distDate}` : '')
+    : (distStart && distEnd ? `&dist_start=${distStart}&dist_end=${distEnd}` : '');
+
+  const qs = `?lookback_days=${windowDays}${distParams}`;
   const { data, error, isLoading } = useSWR(
     `http://127.0.0.1:8080/api/v1/broker_flow/${ticker}/broker_flow${qs}`,
     fetcher
   );
 
-  const paths = data?.broker_distribution?.paths || [];
-  
   useEffect(() => {
-    if (data?.available_dist_dates && data.available_dist_dates.length > 0 && !distDate) {
+    if (data?.available_dist_dates && data.available_dist_dates.length > 0 && !distDate && !distStart) {
       const latest = data.available_dist_dates[data.available_dist_dates.length - 1];
       setDistDate(latest);
       setDistEnd(latest);
       setDistStart(data.available_dist_dates[Math.max(0, data.available_dist_dates.length - 5)]);
     }
-  }, [data, distDate]);
+  }, [data, distDate, distStart]);
 
   useEffect(() => {
     if (data?.default_codes && selectedBrokers.length === 0) {
@@ -69,12 +72,14 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
 
   const allBrokerCodes = data.broker_codes || [];
   const rankedCodes = data.ranked_codes || [];
+  const filteredRankedCodes = searchBroker
+    ? rankedCodes.filter((code: string) => code.includes(searchBroker.toUpperCase()))
+    : rankedCodes;
   
   const handleBrokerToggle = (code: string) => {
     if (selectedBrokers.includes(code)) {
       setSelectedBrokers(selectedBrokers.filter(c => c !== code));
     } else {
-      if (maxBrokers !== 999 && selectedBrokers.length >= maxBrokers) return;
       setSelectedBrokers([...selectedBrokers, code]);
     }
   };
@@ -87,7 +92,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     }
   };
 
-  // Prepare chart data for Broker Compare
   const activityData = data.activity_data || [];
   let chartData: any[] = [];
   
@@ -124,6 +128,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     : profileDetail.filter((r: any) => r.Profile === selectedProfile);
 
   const distData = data.broker_distribution || {};
+  const paths = distData.paths || [];
   const summary = distData.summary || [];
   const detail = distData.detail || [];
 
@@ -133,7 +138,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
         <h3 className="text-sm font-bold mb-3">Broker Drill-Down</h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
           <div>
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Compare Mode</label>
             <button
@@ -147,22 +152,8 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
               {compareMode ? "ON" : "OFF"}
             </button>
           </div>
-          <div>
-            <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Max Brokers</label>
-            <select
-              className="w-full bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
-              value={maxBrokers}
-              onChange={(e) => setMaxBrokers(e.target.value === "All" ? 999 : Number(e.target.value))}
-            >
-              <option value={3}>3</option>
-              <option value={5}>5</option>
-              <option value={8}>8</option>
-              <option value={12}>12</option>
-              <option value="All">All</option>
-            </select>
-          </div>
           
-          {/* Custom Broker Codes Dropdown */}
+          {/* Custom Broker Codes Dropdown with Search */}
           <div className="col-span-2" ref={brokerDropdownRef}>
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Broker Codes</label>
             <div className="relative">
@@ -177,7 +168,17 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
               </button>
               {brokerDropdownOpen && (
                 <div className="absolute z-50 mt-1 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  <div className="sticky top-0 bg-white dark:bg-neutral-800 p-2 border-b border-neutral-200 dark:border-neutral-700">
+                  <div className="sticky top-0 bg-white dark:bg-neutral-800 p-2 border-b border-neutral-200 dark:border-neutral-700 space-y-2">
+                    <div className="relative">
+                      <MagnifyingGlass size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        type="text"
+                        placeholder="Search broker..."
+                        value={searchBroker}
+                        onChange={(e) => setSearchBroker(e.target.value.toUpperCase())}
+                        className="w-full bg-neutral-50 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded pl-7 pr-2 py-1 text-xs focus:outline-none"
+                      />
+                    </div>
                     <button
                       onClick={handleSelectAllBrokers}
                       className="w-full text-left px-2 py-1 text-xs font-semibold text-blue-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded"
@@ -185,7 +186,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
                       {selectedBrokers.length === allBrokerCodes.length ? "Deselect All" : "Select All"}
                     </button>
                   </div>
-                  {rankedCodes.map((code: string) => (
+                  {filteredRankedCodes.map((code: string) => (
                     <div
                       key={code}
                       onClick={() => handleBrokerToggle(code)}
@@ -258,7 +259,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
                     dataKey={broker}
                     stroke={`hsl(${Math.random() * 360}, 70%, 50%)`}
                     strokeWidth={2}
-                    dot={{ r: 4 }}
+                    dot={false}
                   />
                 ))}
               </LineChart>
@@ -306,7 +307,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
                 );
               })}
               
-              {/* Profile Detail Table */}
               <div>
                 <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Profile Detail</label>
                 <select
@@ -360,7 +360,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
           <h3 className="text-sm font-bold mb-3">Broker Distribution</h3>
           
-          {/* Distribution Date Selector */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             <select 
               className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
@@ -401,10 +400,9 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
             )}
           </div>
 
-          {/* Estimated Counterparties List */}
           {paths.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Estimated Counterparties</h4>
+              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Estimated Counterparties on {data.dist_start} to {data.dist_end}</h4>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                 {paths.map((p: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs bg-neutral-50 dark:bg-neutral-800 p-2 rounded border border-neutral-200 dark:border-neutral-700">
@@ -424,7 +422,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
             </div>
           )}
 
-          {/* Broker Summary Table */}
           <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Broker Summary</h4>
           <div className="overflow-x-auto mb-4 max-h-48 overflow-y-auto">
             <table className="w-full text-[11px] whitespace-nowrap">
@@ -461,7 +458,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
             </table>
           </div>
 
-          {/* Detailed Broker Rows */}
           <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Detailed Broker Rows</h4>
           <div className="overflow-x-auto max-h-60 overflow-y-auto">
             <table className="w-full text-[11px] whitespace-nowrap">
