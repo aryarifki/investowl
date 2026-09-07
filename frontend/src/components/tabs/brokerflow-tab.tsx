@@ -15,6 +15,12 @@ function participant_color(label: string): string {
   }[label] || "#94a3b8";
 }
 
+// Helper untuk warna garis yang deterministik (bukan Math.random)
+const COLORS = ["#2563eb", "#dc3545", "#0f9f6e", "#f59e0b", "#7c3aed", "#06b6d4", "#ec4899", "#84cc16"];
+function getChartColor(index: number) {
+  return COLORS[index % COLORS.length];
+}
+
 export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDays: number }) {
   const [selectedBrokers, setSelectedBrokers] = useState<string[]>([]);
   const [flowMode, setFlowMode] = useState("Cumulative");
@@ -215,12 +221,12 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" />
                 <Tooltip contentStyle={{ background: "#0B0E14", border: "1px solid #232B3B", borderRadius: "8px", fontSize: "12px", color: "#E6E0E9" }} />
                 <ReferenceLine y={0} stroke="#64748b" strokeWidth={1} />
-                {selectedBrokers.map((broker: string) => (
+                {selectedBrokers.map((broker: string, index: number) => (
                   <Line
                     key={broker}
                     type="monotone"
                     dataKey={broker}
-                    stroke={`hsl(${Math.random() * 360}, 70%, 50%)`}
+                    stroke={getChartColor(index)}
                     strokeWidth={2}
                     dot={false}
                   />
