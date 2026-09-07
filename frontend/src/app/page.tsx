@@ -311,7 +311,7 @@ export default function TickerPage() {
                 <div className="pb-8">
                   {activeTab === "Overview" && data && !error && <OverviewTab data={data} />}
                   {activeTab === "Broker Flow" && <BrokerFlowTab ticker={ticker} windowDays={windowDays} />}
-                  {activeTab === "Causality" && data && !error && <CausalityTab data={data} />}
+                  {activeTab === "Causality" && <CausalityTab ticker={ticker} />}
                   {activeTab === "Validation" && <ValidationTab />}
                   {activeTab === "Screener" && <ScreenerTab />}
                   {activeTab === "Raw Tables" && <RawTablesTab />}
