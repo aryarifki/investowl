@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import useSWR from "swr";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, BarChart, Bar, Cell } from "recharts";
 import { fmtRp, fmtPct, signedColor } from "@/components/metric-card";
+import { CaretDown, Check } from "@phosphor-icons/react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -20,6 +21,16 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
   const [selectedBrokers, setSelectedBrokers] = useState<string[]>([]);
   const [flowMode, setFlowMode] = useState("Cumulative");
   const [selectedProfile, setSelectedProfile] = useState("All Profiles");
+  
+  // State untuk Distribusi
+  const [distMode, setDistMode] = useState("Single day");
+  const [distDate, setDistDate] = useState("");
+  const [distStart, setDistStart] = useState("");
+  const [distEnd, setDistEnd] = useState("");
+  
+  // State Dropdown Brokers
+  const [brokerDropdownOpen, setBrokerDropdownOpen] = useState(false);
+  const brokerDropdownRef = useRef<HTMLDivElement>(null);
 
   const qs = `?lookback_days=${windowDays}`;
   const { data, error, isLoading } = useSWR(
@@ -27,23 +38,65 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     fetcher
   );
 
+  // Set default distDate saat data pertama kali load
+  useEffect(() => {
+    if (data?.available_dist_dates && data.available_dist_dates.length > 0 && !distDate) {
+      const latest = data.available_dist_dates[data.available_dist_dates.length - 1];
+      setDistDate(latest);
+      setDistEnd(latest);
+      setDistStart(data.available_dist_dates[Math.max(0, data.available_dist_dates.length - 5)]);
+    }
+  }, [data, distDate]);
+
+  // Set default selected brokers
+  useEffect(() => {
+    if (data?.default_codes && selectedBrokers.length === 0) {
+      setSelectedBrokers(data.default_codes);
+    }
+  }, [data, selectedBrokers]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (brokerDropdownRef.current && !brokerDropdownRef.current.contains(event.target as Node)) {
+        setBrokerDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (isLoading) return <div className="text-neutral-500 text-sm p-4">Loading broker flow data...</div>;
   if (error) return <div className="text-red-500 text-sm p-4">Error loading broker flow data.</div>;
   if (!data) return null;
 
-  // Default selected brokers
-  const defaultCodes = data.default_codes || [];
-  const currentSelected = selectedBrokers.length > 0 ? selectedBrokers : defaultCodes;
+  const allBrokerCodes = data.broker_codes || [];
+  const rankedCodes = data.ranked_codes || [];
   
-  // Prepare chart data
+  const handleBrokerToggle = (code: string) => {
+    if (selectedBrokers.includes(code)) {
+      setSelectedBrokers(selectedBrokers.filter(c => c !== code));
+    } else {
+      if (maxBrokers !== 999 && selectedBrokers.length >= maxBrokers) return;
+      setSelectedBrokers([...selectedBrokers, code]);
+    }
+  };
+
+  const handleSelectAllBrokers = () => {
+    if (selectedBrokers.length === allBrokerCodes.length) {
+      setSelectedBrokers([]);
+    } else {
+      setSelectedBrokers([...allBrokerCodes]);
+    }
+  };
+
+  // Prepare chart data for Broker Compare
   const activityData = data.broker_distribution?.dist || [];
   let chartData: any[] = [];
   
-  if (activityData.length > 0 && currentSelected.length > 0) {
-    const filtered = activityData.filter((d: any) => currentSelected.includes(d.broker_code));
+  if (activityData.length > 0 && selectedBrokers.length > 0) {
     const grouped: { [key: string]: { [broker: string]: number } } = {};
-    
-    filtered.forEach((d: any) => {
+    activityData.forEach((d: any) => {
       const date = d.date;
       if (!grouped[date]) grouped[date] = {};
       grouped[date][d.broker_code] = (grouped[date][d.broker_code] || 0) + (d.net_value || 0);
@@ -54,7 +107,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     
     chartData = sortedDates.map(date => {
       const row: any = { date };
-      currentSelected.forEach(broker => {
+      selectedBrokers.forEach(broker => {
         const val = grouped[date][broker] || 0;
         if (flowMode === "Cumulative") {
           cumulative[broker] = (cumulative[broker] || 0) + val;
@@ -67,40 +120,35 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     });
   }
 
-  // Profile flow data
+  // Prepare Profile Flow & Detail
   const profileFlow = data.profile_flow || [];
   const profileDetail = data.profile_broker_detail || [];
-  
-  // Filter profile detail
   const filteredProfileDetail = selectedProfile === "All Profiles" 
     ? profileDetail 
     : profileDetail.filter((r: any) => r.Profile === selectedProfile);
 
-  // Distribution data
+  // Prepare Distribution Data
   const distData = data.broker_distribution || {};
   const paths = distData.paths || [];
   const summary = distData.summary || [];
   const detail = distData.detail || [];
 
-  // Sankey nodes and links
-  const nodeMap: { [key: string]: number } = {};
-  const nodeLabels: string[] = [];
-  const nodeColors: string[] = [];
-  
-  paths.forEach((p: any) => {
-    const bKey = `B:${p.buyer_code}`;
-    const sKey = `S:${p.seller_code}`;
-    if (!(bKey in nodeMap)) {
-      nodeMap[bKey] = nodeLabels.length;
-      nodeLabels.push(p.buyer_code);
-      nodeColors.push(participant_color(p.buyer_type));
-    }
-    if (!(sKey in nodeMap)) {
-      nodeMap[sKey] = nodeLabels.length;
-      nodeLabels.push(p.seller_code);
-      nodeColors.push(participant_color(p.seller_type));
-    }
-  });
+  // Sankey-like Bar Chart Data (Top Buyers vs Sellers)
+  const sankeyData = useMemo(() => {
+    if (paths.length === 0) return [];
+    const buyerTotals: { [key: string]: number } = {};
+    const sellerTotals: { [key: string]: number } = {};
+    
+    paths.forEach((p: any) => {
+      buyerTotals[p.buyer_code] = (buyerTotals[p.buyer_code] || 0) + p.matched_value;
+      sellerTotals[p.seller_code] = (sellerTotals[p.seller_code] || 0) + p.matched_value;
+    });
+    
+    const buyers = Object.entries(buyerTotals).map(([code, val]) => ({ code, val, type: "Buyer" }));
+    const sellers = Object.entries(sellerTotals).map(([code, val]) => ({ code, val, type: "Seller" }));
+    
+    return [...buyers, ...sellers].sort((a, b) => b.val - a.val);
+  }, [paths]);
 
   return (
     <div className="space-y-4">
@@ -135,24 +183,52 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
               <option value="All">All</option>
             </select>
           </div>
-          <div className="col-span-2">
+          
+          {/* Custom Broker Codes Dropdown */}
+          <div className="col-span-2" ref={brokerDropdownRef}>
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Broker Codes</label>
-            <select
-              multiple
-              className="w-full bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm min-h-[38px] max-h-[60px]"
-              value={currentSelected}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions).map(o => o.value);
-                if (maxBrokers !== 999 && selected.length > maxBrokers) return;
-                setSelectedBrokers(selected);
-              }}
-            >
-              {data.broker_codes?.map((code: string) => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                onClick={() => setBrokerDropdownOpen(!brokerDropdownOpen)}
+                className="w-full flex items-center justify-between bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
+              >
+                <span className="truncate">
+                  {selectedBrokers.length === 0 ? "Select Brokers..." : `${selectedBrokers.length} selected`}
+                </span>
+                <CaretDown size={16} className="text-neutral-400" />
+              </button>
+              {brokerDropdownOpen && (
+                <div className="absolute z-50 mt-1 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="sticky top-0 bg-white dark:bg-neutral-800 p-2 border-b border-neutral-200 dark:border-neutral-700">
+                    <button
+                      onClick={handleSelectAllBrokers}
+                      className="w-full text-left px-2 py-1 text-xs font-semibold text-blue-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded"
+                    >
+                      {selectedBrokers.length === allBrokerCodes.length ? "Deselect All" : "Select All"}
+                    </button>
+                  </div>
+                  {rankedCodes.map((code: string) => (
+                    <div
+                      key={code}
+                      onClick={() => handleBrokerToggle(code)}
+                      className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 ${
+                        selectedBrokers.includes(code) ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        selectedBrokers.includes(code) ? "bg-blue-500 border-blue-500" : "border-neutral-300 dark:border-neutral-600"
+                      }`}>
+                        {selectedBrokers.includes(code) && <Check size={12} className="text-white" weight="bold" />}
+                      </div>
+                      <span className="font-mono">{code}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div>
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Flow Mode</label>
@@ -177,7 +253,7 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
               <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
               <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} />
               <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
-              {currentSelected.map((broker: string) => (
+              {selectedBrokers.map((broker: string) => (
                 <Line
                   key={broker}
                   type="monotone"
@@ -284,97 +360,137 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
           <h3 className="text-sm font-bold mb-3">Broker Distribution</h3>
           
           {/* Distribution Date Selector */}
-          <div className="flex gap-2 mb-3">
-            <select className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm">
-              <option>Single day</option>
-              <option>Date range</option>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <select 
+              className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
+              value={distMode}
+              onChange={(e) => setDistMode(e.target.value)}
+            >
+              <option value="Single day">Single day</option>
+              <option value="Date range">Date range</option>
             </select>
-            <select className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm flex-1">
-              {data.available_dist_dates?.map((d: string) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
+            
+            {distMode === "Single day" ? (
+              <select
+                className="col-span-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
+                value={distDate}
+                onChange={(e) => setDistDate(e.target.value)}
+              >
+                {data.available_dist_dates?.map((d: string) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <input
+                  type="date"
+                  className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
+                  value={distStart}
+                  onChange={(e) => setDistStart(e.target.value)}
+                  max={distEnd}
+                />
+                <input
+                  type="date"
+                  className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm"
+                  value={distEnd}
+                  onChange={(e) => setDistEnd(e.target.value)}
+                  min={distStart}
+                />
+              </>
+            )}
           </div>
 
-          {/* Sankey Diagram (simplified as text for now) */}
-          {paths.length === 0 ? (
-            <p className="text-xs text-neutral-500 mb-4">No distribution rows for this date range.</p>
-          ) : (
-            <>
-              <p className="text-xs text-neutral-500 mb-2">
-                Exact broker-to-broker counterparties are unavailable. The flow chart below falls back to estimated same-day matching based on broker net buy and sell totals.
-              </p>
-              
-              {/* Broker Summary Table */}
-              <div className="overflow-x-auto mb-4 max-h-48 overflow-y-auto">
-                <table className="w-full text-[11px] whitespace-nowrap">
-                  <thead className="sticky top-0 bg-white dark:bg-neutral-900">
-                    <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
-                      <th className="text-left py-1 pr-2">Buy Broker</th>
-                      <th className="text-left py-1 pr-2">Type</th>
-                      <th className="text-right py-1 pr-2">Value</th>
-                      <th className="text-right py-1 pr-2">Lot</th>
-                      <th className="text-right py-1 pr-2">Avg</th>
-                      <th className="text-left py-1 pr-2 pl-4">Sell Broker</th>
-                      <th className="text-left py-1 pr-2">Type</th>
-                      <th className="text-right py-1 pr-2">Value</th>
-                      <th className="text-right py-1 pr-2">Lot</th>
-                      <th className="text-right py-1">Avg</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
-                        <td className="py-1 pr-2 font-mono">{row["Buy Broker"] || "-"}</td>
-                        <td className="py-1 pr-2 text-neutral-400">{row["Buy Type"] || "-"}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-emerald-500">{fmtRp(row["Buy Value"])}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row["Buy Lot"] ? `${(row["Buy Lot"]/1000).toFixed(1)}K` : "-"}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row["Buy Avg"] ? fmtRp(row["Buy Avg"]) : "-"}</td>
-                        <td className="py-1 pr-2 pl-4 font-mono">{row["Sell Broker"] || "-"}</td>
-                        <td className="py-1 pr-2 text-neutral-400">{row["Sell Type"] || "-"}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-red-500">{fmtRp(row["Sell Value"])}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row["Sell Lot"] ? `${(row["Sell Lot"]/1000).toFixed(1)}K` : "-"}</td>
-                        <td className="py-1 text-right font-mono text-neutral-400">{row["Sell Avg"] ? fmtRp(row["Sell Avg"]) : "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* Broker Distribution Paths (Sankey Alternative) */}
+          {paths.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Estimated Matching Paths</h4>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sankeyData} layout="vertical" margin={{ top: 5, right: 5, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} stroke="#94a3b8" />
+                    <YAxis dataKey="code" type="category" tick={{ fontSize: 10, fill: "#94a3b8" }} stroke="#94a3b8" width={40} />
+                    <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} formatter={(value: any) => fmtRp(value)} />
+                    <Bar dataKey="val" name="Value" radius={[0, 4, 4, 0]}>
+                      {sankeyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.type === "Buyer" ? "#10b981" : "#f43f5e"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-
-              {/* Detailed Broker Rows */}
-              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Detailed Broker Rows</h4>
-              <div className="overflow-x-auto max-h-60 overflow-y-auto">
-                <table className="w-full text-[11px] whitespace-nowrap">
-                  <thead className="sticky top-0 bg-white dark:bg-neutral-900">
-                    <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
-                      <th className="text-left py-1 pr-2">Broker</th>
-                      <th className="text-left py-1 pr-2">Type</th>
-                      <th className="text-right py-1 pr-2">Buy</th>
-                      <th className="text-right py-1 pr-2">Sell</th>
-                      <th className="text-right py-1 pr-2">Net</th>
-                      <th className="text-right py-1 pr-2">Freq</th>
-                      <th className="text-right py-1 pr-2">Avg/Tx</th>
-                      <th className="text-left py-1">Sub-type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
-                        <td className="py-1 pr-2 font-mono">{row.Broker}</td>
-                        <td className="py-1 pr-2 text-neutral-400">{row.Type}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-emerald-500">{fmtRp(row.Buy)}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-red-500">{fmtRp(row.Sell)}</td>
-                        <td className="py-1 pr-2 text-right font-mono" style={{ color: signedColor(row.Net) }}>{fmtRp(row.Net)}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row.Freq}</td>
-                        <td className="py-1 pr-2 text-right font-mono text-neutral-400">{fmtRp(row["Avg Value / Tx"])}</td>
-                        <td className="py-1 text-neutral-400">{row["Sub-type"]}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+            </div>
           )}
+
+          {/* Broker Summary Table */}
+          <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Broker Summary</h4>
+          <div className="overflow-x-auto mb-4 max-h-48 overflow-y-auto">
+            <table className="w-full text-[11px] whitespace-nowrap">
+              <thead className="sticky top-0 bg-white dark:bg-neutral-900">
+                <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
+                  <th className="text-left py-1 pr-2">Buy Broker</th>
+                  <th className="text-left py-1 pr-2">Type</th>
+                  <th className="text-right py-1 pr-2">Value</th>
+                  <th className="text-right py-1 pr-2">Lot</th>
+                  <th className="text-right py-1 pr-2">Avg</th>
+                  <th className="text-left py-1 pr-2 pl-4">Sell Broker</th>
+                  <th className="text-left py-1 pr-2">Type</th>
+                  <th className="text-right py-1 pr-2">Value</th>
+                  <th className="text-right py-1 pr-2">Lot</th>
+                  <th className="text-right py-1">Avg</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.map((row: any, i: number) => (
+                  <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
+                    <td className="py-1 pr-2 font-mono">{row["Buy Broker"] || "-"}</td>
+                    <td className="py-1 pr-2 text-neutral-400">{row["Buy Type"] || "-"}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-emerald-500">{fmtRp(row["Buy Value"])}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row["Buy Lot"] ? `${(row["Buy Lot"]/1000).toFixed(1)}K` : "-"}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row["Buy Avg"] ? fmtRp(row["Buy Avg"]) : "-"}</td>
+                    <td className="py-1 pr-2 pl-4 font-mono">{row["Sell Broker"] || "-"}</td>
+                    <td className="py-1 pr-2 text-neutral-400">{row["Sell Type"] || "-"}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-red-500">{fmtRp(row["Sell Value"])}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row["Sell Lot"] ? `${(row["Sell Lot"]/1000).toFixed(1)}K` : "-"}</td>
+                    <td className="py-1 text-right font-mono text-neutral-400">{row["Sell Avg"] ? fmtRp(row["Sell Avg"]) : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Detailed Broker Rows */}
+          <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Detailed Broker Rows</h4>
+          <div className="overflow-x-auto max-h-60 overflow-y-auto">
+            <table className="w-full text-[11px] whitespace-nowrap">
+              <thead className="sticky top-0 bg-white dark:bg-neutral-900">
+                <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
+                  <th className="text-left py-1 pr-2">Broker</th>
+                  <th className="text-left py-1 pr-2">Type</th>
+                  <th className="text-right py-1 pr-2">Buy</th>
+                  <th className="text-right py-1 pr-2">Sell</th>
+                  <th className="text-right py-1 pr-2">Net</th>
+                  <th className="text-right py-1 pr-2">Freq</th>
+                  <th className="text-right py-1 pr-2">Avg/Tx</th>
+                  <th className="text-left py-1">Sub-type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.map((row: any, i: number) => (
+                  <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
+                    <td className="py-1 pr-2 font-mono">{row.Broker}</td>
+                    <td className="py-1 pr-2 text-neutral-400">{row.Type}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-emerald-500">{fmtRp(row.Buy)}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-red-500">{fmtRp(row.Sell)}</td>
+                    <td className="py-1 pr-2 text-right font-mono" style={{ color: signedColor(row.Net) }}>{fmtRp(row.Net)}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row.Freq}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-neutral-400">{fmtRp(row["Avg Value / Tx"])}</td>
+                    <td className="py-1 text-neutral-400">{row["Sub-type"]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
