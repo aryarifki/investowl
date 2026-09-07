@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { fmtRp, fmtPct, signedColor } from "@/components/metric-card";
-import { CaretDown, Check, X, MagnifyingGlass } from "@phosphor-icons/react";
+import { CaretDown, Check, X, MagnifyingGlass, Spinner } from "@phosphor-icons/react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -30,15 +30,17 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
   const [searchBroker, setSearchBroker] = useState("");
   const brokerDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Construct dynamic SWR URL to fetch new distribution data when dates change
   const distParams = distMode === "Single day"
     ? (distDate ? `&dist_start=${distDate}&dist_end=${distDate}` : '')
     : (distStart && distEnd ? `&dist_start=${distStart}&dist_end=${distEnd}` : '');
 
   const qs = `?lookback_days=${windowDays}${distParams}`;
-  const { data, error, isLoading } = useSWR(
+  
+  // Gunakan keepPreviousData agar UI tidak hilang saat loading data baru
+  const { data, error, isLoading, isValidating } = useSWR(
     `http://127.0.0.1:8080/api/v1/broker_flow/${ticker}/broker_flow${qs}`,
-    fetcher
+    fetcher,
+    { keepPreviousData: true }
   );
 
   useEffect(() => {
@@ -66,8 +68,9 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (isLoading) return <div className="text-neutral-500 text-sm p-4">Loading broker flow data...</div>;
-  if (error) return <div className="text-red-500 text-sm p-4">Error loading broker flow data.</div>;
+  // Hanya tampilkan loading awal jika tidak ada data sama sekali
+  if (isLoading && !data) return <div className="text-neutral-500 text-sm p-4">Loading broker flow data...</div>;
+  if (error && !data) return <div className="text-red-500 text-sm p-4">Error loading broker flow data.</div>;
   if (!data) return null;
 
   const allBrokerCodes = data.broker_codes || [];
@@ -133,7 +136,15 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
   const detail = distData.detail || [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
+      {/* Indikator Loading saat fetch data baru */}
+      {isValidating && (
+        <div className="absolute top-2 right-2 z-50 flex items-center gap-2 text-xs text-blue-500 bg-blue-50 dark:bg-blue-950/50 px-3 py-1 rounded-full shadow">
+          <Spinner size={14} weight="bold" className="animate-spin" />
+          <span>Updating...</span>
+        </div>
+      )}
+
       {/* Broker Drill-Down */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
         <h3 className="text-sm font-bold mb-3">Broker Drill-Down</h3>
@@ -153,7 +164,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
             </button>
           </div>
           
-          {/* Custom Broker Codes Dropdown with Search */}
           <div className="col-span-2" ref={brokerDropdownRef}>
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Broker Codes</label>
             <div className="relative">
@@ -221,7 +231,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
             </select>
           </div>
           
-          {/* Broker Chips */}
           <div className="col-span-3">
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Selected Brokers</label>
             <div className="flex flex-wrap gap-2 items-center min-h-[38px]">
