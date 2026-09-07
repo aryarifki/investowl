@@ -85,32 +85,34 @@ export default function TickerPage() {
     }
   };
 
+  const scoreTone = data?.conviction_score >= 70 ? "positive" : data?.conviction_score >= 40 ? "warning" : "negative";
+
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex pb-16 lg:pb-0">
+    <div className="min-h-screen bg-[#0B0E14] text-[#E6E0E9] flex pb-16 lg:pb-0">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed lg:sticky top-0 z-50 h-screen w-72 bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside className={`fixed lg:sticky top-0 z-50 h-screen w-72 bg-[#151B26] border-r border-[#232B3B] overflow-y-auto transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="p-4 space-y-5">
           <div className="flex justify-between items-center">
             <div>
               <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">IDX Broker Flow</div>
               <h2 className="text-sm font-bold">Controls</h2>
             </div>
-            <button className="lg:hidden p-2 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800" onClick={() => setSidebarOpen(false)}>
+            <button className="lg:hidden p-2 rounded hover:bg-[#232B3B]" onClick={() => setSidebarOpen(false)}>
               <X size={20} />
             </button>
           </div>
           <div>
-            <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Analysis Date</label>
-            <select className="w-full bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm">
+            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Analysis Date</label>
+            <select className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm">
               <option>{data?.analysis_date || "Latest Available"}</option>
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Broker Window</label>
-            <select className="w-full bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm" value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>
+            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Broker Window</label>
+            <select className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm" value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>
               {WINDOWS.map((w) => <option key={w} value={w}>{w} calendar days</option>)}
             </select>
           </div>
@@ -125,27 +127,27 @@ export default function TickerPage() {
               {isSyncing ? "Syncing IDX..." : "Sync Latest Data"}
             </button>
             {syncInfo && (
-              <div className="mt-2 p-2 bg-neutral-100 dark:bg-neutral-800 rounded text-[10px] space-y-1">
+              <div className="mt-2 p-2 bg-[#232B3B] rounded text-[10px] space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">Active Stocks:</span>
+                  <span className="text-[#64748b]">Active Stocks:</span>
                   <span className="font-mono font-bold text-blue-500">{syncInfo.active_count || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">Latest Broker DB:</span>
+                  <span className="text-[#64748b]">Latest Broker DB:</span>
                   <span className="font-mono font-bold text-blue-500">{syncInfo.latest_broker_date || "Empty"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">Latest Price DB:</span>
+                  <span className="text-[#64748b]">Latest Price DB:</span>
                   <span className="font-mono font-bold text-blue-500">{syncInfo.latest_price_date || "Empty"}</span>
                 </div>
               </div>
             )}
           </div>
 
-          <hr className="border-neutral-200 dark:border-neutral-800" />
+          <hr className="border-[#232B3B]" />
           
           <div className="space-y-2">
-            <button className="w-full bg-white dark:bg-neutral-800 hover:opacity-80 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
+            <button className="w-full bg-[#0B0E14] hover:opacity-80 border border-[#232B3B] rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
               Run latest pipeline to today
             </button>
           </div>
@@ -153,17 +155,17 @@ export default function TickerPage() {
       </aside>
 
       <main className="flex-1 min-w-0 flex flex-col">
-        <div className="flex items-center gap-3 px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-30">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+        <div className="flex items-center gap-3 px-4 py-3 bg-[#151B26] border-b border-[#232B3B] sticky top-0 z-30">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-[#0B0E14] border border-[#232B3B]">
             <List size={20} />
           </button>
           <span className="font-bold text-lg">{activePage === "Dashboard" ? ticker : activePage}</span>
           <div className="ml-auto flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-xs text-neutral-500">
+            <div className="hidden md:flex items-center gap-2 text-xs text-[#64748b]">
               <Database size={16} weight="bold" />
               <span>DB Date: {data?.analysis_date || "..."}</span>
             </div>
-            <div className="hidden md:flex items-center gap-1 text-xs text-neutral-500 bg-neutral-200 dark:bg-neutral-800 px-2 py-1 rounded-full">
+            <div className="hidden md:flex items-center gap-1 text-xs text-[#64748b] bg-[#232B3B] px-2 py-1 rounded-full">
               <ChartBar size={14} weight="bold" />
               <span>Active: {tickerCount}</span>
             </div>
@@ -176,14 +178,14 @@ export default function TickerPage() {
             
             {activePage === "Dashboard" && (
               <>
-                <div className="mb-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+                <div className="mb-5 bg-[#151B26] border border-[#232B3B] rounded-xl p-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">IDX Broker Flow Research</div>
                       <h1 className="text-xl sm:text-2xl font-bold">Smart Money Dashboard</h1>
                     </div>
                     <div className="relative w-full sm:w-64">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
                         <MagnifyingGlass size={16} weight="bold" />
                       </div>
                       <input 
@@ -193,12 +195,12 @@ export default function TickerPage() {
                         onChange={(e) => { setSearchQuery(e.target.value.toUpperCase()); setShowDropdown(true); }}
                         onFocus={() => setShowDropdown(true)}
                         onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500"
                       />
                       {showDropdown && filteredTickers.length > 0 && (
-                        <div className="absolute top-full mt-1 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                        <div className="absolute top-full mt-1 w-full bg-[#151B26] border border-[#232B3B] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                           {filteredTickers.map((t: string) => (
-                            <button key={t} onClick={() => handleSelectTicker(t)} className="w-full text-left px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
+                            <button key={t} onClick={() => handleSelectTicker(t)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#232B3B] transition-colors">
                               {t}
                             </button>
                           ))}
@@ -207,45 +209,45 @@ export default function TickerPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    <span className="text-[11px] font-semibold bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full px-3 py-1.5 shadow-sm">
+                    <span className="text-[11px] font-semibold bg-[#232B3B] border border-[#232B3B] rounded-full px-3 py-1.5 shadow-sm">
                       Ticker: <span className="text-blue-500">{ticker}</span>
                     </span>
-                    <span className="text-[11px] font-semibold bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full px-3 py-1.5 shadow-sm">
+                    <span className="text-[11px] font-semibold bg-[#232B3B] border border-[#232B3B] rounded-full px-3 py-1.5 shadow-sm">
                       Window {data?.window_start || "..."} to {data?.analysis_date || "..."}
                     </span>
                   </div>
                 </div>
 
-                {isLoading && <div className="text-neutral-500 text-sm mb-4">Loading data for {ticker}...</div>}
+                {isLoading && <div className="text-[#64748b] text-sm mb-4">Loading data for {ticker}...</div>}
                 {error && <div className="text-red-500 text-sm mb-4">Error loading data. Make sure FastAPI is running.</div>}
 
                 {data && !error && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-                    <MetricCard label="Conviction Score" value={`${data.conviction_score?.toFixed(1) || "-"}/100`} note="weighted model" tone={data.score_tone_name} title={data.breakdown} />
-                    <MetricCard label="Signal" value={data.signal_row?.bandar_signal || "-"} note="selected date" tone={null} accent={data.signal_row?.bandar_signal_score >= 1 ? "#10b981" : data.signal_row?.bandar_signal_score <= -1 ? "#f43f5e" : "#94a3b8"} />
-                    <MetricCard label="5D Return" value={fmtPct(data.ret_5d)} note="price context" tone={data.ret_5d} />
-                    <MetricCard label="Foreign Net 5D" value={fmtRp(data.foreign_5d)} note="broker summary" tone={data.foreign_5d} />
-                    <MetricCard label="Top Buyer" value={data.top_buyers?.[0]?.broker_code || "-"} note={fmtRp(data.top_buyers?.[0]?.net_value)} tone={1} />
-                    <MetricCard label="Smart Cumulative" value={fmtRp(data.smart_cumulative)} note={`${data.daily_smart?.length || 0} broker days`} tone={data.smart_cumulative} />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+                    <MetricCard label="Conviction Score" value={`${data.conviction_score?.toFixed(1) || "-"}/100`} note="weighted model" tone={scoreTone} title={data.breakdown} />
+                    <MetricCard label="Signal" value={data.signal || "-"} note="selected date" tone={null} accent={data.signal_score >= 1 ? "#0f9f6e" : data.signal_score <= -1 ? "#dc3545" : "#64748b"} />
+                    <MetricCard label="5D Return" value={fmtPct(data.ret_5d)} note="price context" tone={data.ret_5d >= 0 ? "positive" : "negative"} />
+                    <MetricCard label="Foreign Net 5D" value={fmtRp(data.foreign_5d)} note="broker summary" tone={data.foreign_5d >= 0 ? "positive" : "negative"} />
+                    <MetricCard label="Top Buyer" value={data.top_buyer?.broker || "-"} note={fmtRp(data.top_buyer?.net)} tone="positive" />
+                    <MetricCard label="Smart Cumulative" value={fmtRp(data.smart_cumulative)} note={`${data.smart_daily?.length || 0} broker days`} tone={data.smart_cumulative >= 0 ? "positive" : "negative"} />
                   </div>
                 )}
 
                 {data?.alerts?.length > 0 && (
-                  <div className="mb-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-3">
+                  <div className="mb-4 bg-amber-950/30 border border-amber-800/50 rounded-xl px-4 py-3">
                     {data.alerts.map((a: string, i: number) => (
-                      <div key={i} className="text-sm text-amber-800 dark:text-amber-300">{a}</div>
+                      <div key={i} className="text-sm text-amber-300">{a}</div>
                     ))}
                   </div>
                 )}
 
                 {data?.verdict && (
-                  <div className="mb-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-xl px-4 py-3">
+                  <div className="mb-4 bg-blue-950/30 border-l-4 border-blue-500 rounded-r-xl px-4 py-3">
                     <div className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">Current read</div>
-                    <div className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed">{data.verdict}</div>
+                    <div className="text-sm text-[#E6E0E9] leading-relaxed">{data.verdict}</div>
                   </div>
                 )}
 
-                <div className="border-b border-neutral-200 dark:border-neutral-800 mb-4 mt-6">
+                <div className="border-b border-[#232B3B] mb-4 mt-6">
                   <div className="flex gap-1 overflow-x-auto">
                     {DASHBOARD_TABS.map((tab) => (
                       <button
@@ -254,7 +256,7 @@ export default function TickerPage() {
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold whitespace-nowrap rounded-t-lg transition-colors ${
                           activeTab === tab.name
                             ? "text-blue-500 border-b-2 border-blue-500"
-                            : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+                            : "text-[#64748b] hover:text-[#E6E0E9]"
                         }`}
                       >
                         <tab.icon size={16} weight="bold" />
@@ -292,7 +294,7 @@ export default function TickerPage() {
         </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex justify-around items-center h-16">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#151B26] border-t border-[#232B3B] flex justify-around items-center h-16">
         {BOTTOM_NAV.map((nav) => {
           const Icon = nav.icon;
           const isActive = activePage === nav.name;
@@ -301,7 +303,7 @@ export default function TickerPage() {
               key={nav.name}
               onClick={() => setActivePage(nav.name)}
               className={`flex flex-col items-center justify-center w-full h-full text-[10px] font-medium transition-colors ${
-                isActive ? "text-blue-500" : "text-neutral-500 dark:text-neutral-400"
+                isActive ? "text-blue-500" : "text-[#64748b]"
               }`}
             >
               <Icon size={22} weight={isActive ? "fill" : "regular"} />

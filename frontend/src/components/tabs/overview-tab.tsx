@@ -14,24 +14,24 @@ function signalColor(score: number | null | undefined): string {
 export function OverviewTab({ data }: { data: any }) {
   if (!data) return null;
 
-  const signalMarkers = (data.price_context || []).filter((d: any) => d.bandar_signal_score !== null && d.bandar_signal_score !== undefined);
+  const signalMarkers = (data.signal_overlay || []).filter((d: any) => d.score !== null && d.score !== undefined);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-4">
-        {/* Price, Volume, and Signal Context (Compact Height) */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+        {/* Price, Volume, and Signal Context */}
+        <div className="bg-[#151B26] border border-[#232B3B] rounded-md p-3">
           <h3 className="text-sm font-bold mb-3">Price, Volume, and Signal Context</h3>
-          <div className="h-64"> {/* Dikecilkan dari h-96 */}
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data.price_context || []} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" domain={["auto", "auto"]} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} />
-                <Bar yAxisId="right" dataKey="volume" fill="#3b82f6" opacity={0.3} />
-                <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              <ComposedChart data={data.price_chart || []} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#232B3B" opacity={0.2} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" />
+                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" domain={["auto", "auto"]} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" />
+                <Tooltip contentStyle={{ background: "#0B0E14", border: "1px solid #232B3B", borderRadius: "8px", fontSize: "12px", color: "#E6E0E9" }} />
+                <Bar yAxisId="right" dataKey="volume" fill="#2563eb" opacity={0.3} />
+                <Line yAxisId="left" type="monotone" dataKey="close" stroke="#2563eb" strokeWidth={2} dot={false} />
                 <Scatter yAxisId="left" data={signalMarkers} dataKey="close" fill="#10b981" shape="circle" />
               </ComposedChart>
             </ResponsiveContainer>
@@ -40,13 +40,13 @@ export function OverviewTab({ data }: { data: any }) {
 
         {/* Top Brokers & Price Performance */}
         <div className="space-y-4">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+          <div className="bg-[#151B26] border border-[#232B3B] rounded-md p-3">
             <h3 className="text-sm font-bold mb-2">Top Brokers</h3>
-            <p className="text-xs text-neutral-500 mb-2">Broker net buy/sell on analysis date</p>
+            <p className="text-xs text-[#64748b] mb-2">Broker net buy/sell on analysis date</p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
+                  <tr className="text-[#64748b] border-b border-[#232B3B]">
                     <th className="text-left py-1">Side</th>
                     <th className="text-left py-1">Broker</th>
                     <th className="text-left py-1">Type</th>
@@ -55,13 +55,13 @@ export function OverviewTab({ data }: { data: any }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.top_brokers_compact?.map((row: any, i: number) => (
-                    <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
-                      <td className="py-1" style={{ color: row.side === "Buy" ? "#10b981" : "#f43f5e" }}>{row.side}</td>
-                      <td className="py-1 font-mono">{row.broker_code}</td>
-                      <td className="py-1 text-neutral-400">{row.participant_type}</td>
-                      <td className="py-1 text-right font-mono" style={{ color: signedColor(row.net_value) }}>{fmtRp(row.net_value)}</td>
-                      <td className="py-1 pl-2 text-neutral-400 font-mono">{row.sparkline}</td>
+                  {data.broker_summary?.map((row: any, i: number) => (
+                    <tr key={i} className="table-row">
+                      <td className="py-1" style={{ color: row.side === "Buy" ? "#0f9f6e" : "#dc3545" }}>{row.side}</td>
+                      <td className="py-1 font-mono">{row.broker}</td>
+                      <td className="py-1 text-[#64748b]">{row.type}</td>
+                      <td className="py-1 text-right font-mono" style={{ color: signedColor(row.net) }}>{fmtRp(row.net)}</td>
+                      <td className="py-1 pl-2 text-[#64748b] font-mono">{row.spark}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -69,21 +69,21 @@ export function OverviewTab({ data }: { data: any }) {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+          <div className="bg-[#151B26] border border-[#232B3B] rounded-md p-3">
             <h3 className="text-sm font-bold mb-2">Price Performance</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
+                  <tr className="text-[#64748b] border-b border-[#232B3B]">
                     <th className="text-left py-1">Period</th>
                     <th className="text-right py-1">Return</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.price_performance?.map((row: any, i: number) => (
-                    <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
-                      <td className="py-1 text-neutral-300">{row.timeframe}</td>
-                      <td className="py-1 text-right font-mono" style={{ color: signedColor(row.return) }}>{fmtPct(row.return)}</td>
+                    <tr key={i} className="table-row">
+                      <td className="py-1 text-[#94A3B8]">{row.period}</td>
+                      <td className="py-1 text-right font-mono" style={{ color: signedColor(row.value) }}>{fmtPct(row.value)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -93,69 +93,56 @@ export function OverviewTab({ data }: { data: any }) {
         </div>
       </div>
       
-      {/* Smart Flow & Profile (Compact Height) */}
+      {/* Smart Flow & Profile */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+        <div className="bg-[#151B26] border border-[#232B3B] rounded-md p-3">
           <h3 className="text-sm font-bold mb-3">Smart-Money Daily Flow</h3>
-          <div className="h-48"> {/* Dikecilkan dari h-72 */}
+          <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data.daily_smart || []} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#94a3b8" }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} />
-                <Bar yAxisId="left" dataKey="smart_net" fill="#10b981" />
-                <Line yAxisId="right" type="monotone" dataKey="cumulative_net" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeWidth={1} />
+              <ComposedChart data={data.smart_daily || []} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#232B3B" opacity={0.2} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" />
+                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#64748b" }} stroke="#232B3B" />
+                <Tooltip contentStyle={{ background: "#0B0E14", border: "1px solid #232B3B", borderRadius: "8px", fontSize: "12px", color: "#E6E0E9" }} />
+                <Bar yAxisId="left" dataKey="smart_net" fill="#0f9f6e" />
+                <Line yAxisId="right" type="monotone" dataKey="cumulative_net" stroke="#2563eb" strokeWidth={2} dot={false} />
+                <ReferenceLine yAxisId="left" y={0} stroke="#64748b" strokeWidth={1} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+        <div className="bg-[#151B26] border border-[#232B3B] rounded-md p-3">
           <h3 className="text-sm font-bold mb-3">Profile Net Flow</h3>
           {(data.profile_flow || []).length === 0 ? (
-            <p className="text-xs text-neutral-500">No profile flow for this window.</p>
+            <p className="text-xs text-[#64748b]">No profile flow for this window.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {data.profile_flow.map((row: any, i: number) => {
                 const maxAbs = Math.max(...(data.profile_flow || []).map((r: any) => Math.abs(r.net)), 1);
                 const width = Math.max(3, (Math.abs(row.net) / maxAbs) * 100);
                 return (
                   <div key={i}>
                     <div className="flex justify-between items-center text-xs mb-1">
-                      <div>
-                        <span className="text-neutral-200 font-semibold">{row.label}</span>
-                        <span className="block text-[10px] text-neutral-500 mt-0.5">{row.description}</span>
-                      </div>
+                      <span className="text-[#E6E0E9] font-semibold">{row.label}</span>
                       <span className="font-mono font-bold" style={{ color: signedColor(row.net) }}>{fmtRp(row.net)}</span>
                     </div>
-                    <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mb-2">
+                    <div className="h-1.5 bg-[#232B3B] rounded-full overflow-hidden mb-2">
                       <div className="h-full rounded-full" style={{ width: width + "%", backgroundColor: signedColor(row.net) }} />
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {row.top_brokers?.slice(0, 3).map((b: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded text-[10px] border border-neutral-200 dark:border-neutral-700">
-                          <span className="font-mono font-bold">{b.broker_code}</span>
-                          <span className="text-neutral-500 border-l border-neutral-300 dark:border-neutral-600 pl-1">{b.participant_type}</span>
-                          <span className="font-mono pl-1" style={{ color: signedColor(b.net) }}>{fmtRp(b.net)}</span>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 );
               })}
               
-              {/* Profile Broker Detail Table (Lengkap 9 Kolom) */}
               <details className="mt-4 group">
-                <summary className="text-xs font-semibold cursor-pointer text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">
+                <summary className="text-xs font-semibold cursor-pointer text-[#64748b] hover:text-[#94A3B8]">
                   Broker detail by profile
                 </summary>
-                <div className="overflow-x-auto mt-2 max-h-60 overflow-y-auto"> {/* Tambah max-h agar bisa scroll */}
+                <div className="overflow-x-auto mt-2 max-h-60 overflow-y-auto">
                   <table className="w-full text-[11px] whitespace-nowrap">
-                    <thead className="sticky top-0 bg-white dark:bg-neutral-900">
-                      <tr className="text-neutral-500 border-b border-neutral-200 dark:border-neutral-800">
+                    <thead className="sticky top-0 bg-[#151B26]">
+                      <tr className="text-[#64748b] border-b border-[#232B3B]">
                         <th className="text-left py-1 pr-2">Profile</th>
                         <th className="text-left py-1 pr-2">Broker</th>
                         <th className="text-left py-1 pr-2">Type</th>
@@ -169,16 +156,16 @@ export function OverviewTab({ data }: { data: any }) {
                     </thead>
                     <tbody>
                       {data.profile_broker_detail?.map((row: any, i: number) => (
-                        <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
-                          <td className="py-1 pr-2 text-neutral-400">{row.Profile}</td>
-                          <td className="py-1 pr-2 font-mono">{row.Broker}</td>
-                          <td className="py-1 pr-2 text-neutral-400">{row.Type}</td>
-                          <td className="py-1 pr-2 text-right font-mono text-emerald-500">{fmtRp(row.Buy)}</td>
-                          <td className="py-1 pr-2 text-right font-mono text-red-500">{fmtRp(row.Sell)}</td>
-                          <td className="py-1 pr-2 text-right font-mono" style={{ color: signedColor(row.Net) }}>{fmtRp(row.Net)}</td>
-                          <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row.Freq}</td>
-                          <td className="py-1 pr-2 text-right font-mono text-neutral-400">{row.Days}</td>
-                          <td className="py-1 text-right font-mono text-neutral-400">{fmtRp(row["Avg Value / Tx"])}</td>
+                        <tr key={i} className="table-row">
+                          <td className="py-1 pr-2 text-[#64748b]">{row.profile}</td>
+                          <td className="py-1 pr-2 font-mono">{row.broker}</td>
+                          <td className="py-1 pr-2 text-[#64748b]">{row.type}</td>
+                          <td className="py-1 pr-2 text-right font-mono text-emerald-500">{fmtRp(row.buy)}</td>
+                          <td className="py-1 pr-2 text-right font-mono text-red-500">{fmtRp(row.sell)}</td>
+                          <td className="py-1 pr-2 text-right font-mono" style={{ color: signedColor(row.net) }}>{fmtRp(row.net)}</td>
+                          <td className="py-1 pr-2 text-right font-mono text-[#64748b]">{row.freq}</td>
+                          <td className="py-1 pr-2 text-right font-mono text-[#64748b]">{row.days}</td>
+                          <td className="py-1 text-right font-mono text-[#64748b]">{fmtRp(row.avg_value_tx)}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -2,14 +2,50 @@
 
 @layer base {
   body {
-    @apply bg-white text-neutral-900;
-  }
-  .dark body {
-    @apply bg-neutral-950 text-neutral-100;
+    @apply bg-[#0B0E14] text-[#E6E0E9] font-sans antialiased;
   }
 }
 
+/* Custom Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-.dark ::-webkit-scrollbar-thumb { background: #262626; }
+::-webkit-scrollbar-thumb { background: #232B3B; border-radius: 3px; }
+
+/* Warna khas app.py */
+:root {
+  --green: #0f9f6e;
+  --red: #dc3545;
+  --blue: #2563eb;
+  --amber: #b7791f;
+  --muted: #64748b;
+  --line: #232B3B;
+  --panel: #151B26;
+}
+
+/* Metric Card Style (Persis app.py) */
+.metric-card {
+  @apply bg-[#151B26] border border-[#232B3B] rounded-md p-2 border-l-[3px] transition-all hover:shadow-sm;
+}
+.metric-label {
+  @apply text-[10px] font-bold text-[#64748b] uppercase tracking-wider mb-1;
+}
+.metric-value {
+  @apply text-base font-bold font-mono tabular-nums leading-tight;
+}
+.metric-note {
+  @apply text-[10px] text-[#64748b] truncate mt-1;
+}
+
+/* Panel & Table Style */
+.panel-base {
+  @apply bg-[#151B26] border border-[#232B3B] rounded-md p-3;
+}
+.table-header {
+  @apply text-[10px] font-bold text-[#64748b] uppercase tracking-wider py-1 px-2;
+}
+.table-row {
+  @apply text-[11px] border-b border-[#232B3B]/50 hover:bg-[#232B3B]/30 transition-colors;
+}
+.chip {
+  @apply inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#232B3B] rounded text-[10px] border border-[#232B3B];
+}

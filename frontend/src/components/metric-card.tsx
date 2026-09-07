@@ -14,23 +14,23 @@ function fmt_pct(n: number | null | undefined): string {
 }
 
 function signed_color(n: number | null | undefined): string {
-  return (n ?? 0) >= 0 ? "#10b981" : "#f43f5e";
+  return (n ?? 0) >= 0 ? "#0f9f6e" : "#dc3545";
 }
 
 export function MetricCard({ label, value, note, tone, accent, title }: { label: string; value: string; note: string; tone?: string | null; accent?: string; title?: string }) {
-  let color = "inherit";
+  let color = "#64748b"; // Default muted
   if (accent) color = accent;
-  else if (tone === "positive") color = "#10b981";
-  else if (tone === "negative") color = "#f43f5e";
-  else if (tone === "warning") color = "#f59e0b";
+  else if (tone === "positive") color = "#0f9f6e";
+  else if (tone === "negative") color = "#dc3545";
+  else if (tone === "warning") color = "#b7791f";
   
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 border-l-4" style={{ borderLeftColor: color }} title={title || ""}>
-      <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">{label}</div>
-      <div className="text-base font-bold" style={{ color }}>{value}</div>
-      <div className="text-[11px] text-neutral-500 truncate mt-1">{note}</div>
+    <div className="metric-card" style={{ borderLeftColor: color }} title={title || ""}>
+      <div className="metric-label">{label}</div>
+      <div className="metric-value" style={{ color }}>{value}</div>
+      <div className="metric-note">{note}</div>
     </div>
   );
 }
 
-export { fmt_rp, fmt_pct, signed_color };
+export { fmt_rp as fmtRp, fmt_pct as fmtPct, signed_color as signedColor };
