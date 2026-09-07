@@ -1,14 +1,11 @@
 import numpy as np
-"""Router bandarmology — membungkus fungsi paket idx_bandarmology."""
 from datetime import date
-import threading
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 import math
 import time
 
-from app.services.analysis_service import safe_val, df_to_records
 from idx_bandarmology import analysis, storage
 
 router = APIRouter(tags=["Dashboard"])
@@ -17,6 +14,7 @@ def _clean(obj):
     if isinstance(obj, dict): return {k: _clean(v) for k, v in obj.items()}
     if isinstance(obj, list): return [_clean(v) for v in obj]
     if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)): return None
+    if hasattr(obj, 'item'): return obj.item()
     return obj
 
 def _fmt_signal(value):
@@ -64,10 +62,9 @@ def _broker_win_component(scan_df, ticker):
     return max(0, min(100, win_rate * 100)), str(row.get("broker_code", "-")) + " win rate " + "{:.0%}".format(win_rate)
 
 def _conviction_score(signal, foreign_5d, scan_df, ticker):
-    try:
-        causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
-    except Exception:
-        causality = None
+    # Hapus try-catch agar error Granger terlihat jika ada
+    causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
+    
     p_value = None if not causality else float(causality.get("min_p_value", np.nan))
     p_score = _p_value_component(p_value)
     s_score = _label_component(signal)
@@ -139,7 +136,7 @@ def _sparkline_values(activity, broker_code, end_ts, days=5):
 _DETAIL_CACHE = {}
 
 @router.get("/{ticker}/dashboard")
-def ticker_detail(ticker: str, analysis_date: str = None, lookback_days: int = 60, window_days: int = 60):
+def ticker_detail(ticker: str, analysis_date: str = None, lookback_days: int = 60):
     ticker = ticker.upper().strip()
     activity_df = storage.read_broker_activity([ticker]).copy()
     if activity_df.empty:
@@ -243,19 +240,10 @@ def ticker_detail(ticker: str, analysis_date: str = None, lookback_days: int = 6
         for _, row in broker_window[["date", "bandar_signal", "bandar_signal_score"]].copy().iterrows():
             signal_overlay.append({"date": str(row["date"]), "signal": _fmt_signal(row["bandar_signal"]), "score": float(row["bandar_signal_score"]) if pd.notna(row["bandar_signal_score"]) else None})
 
-    # Causality Data
-    try:
-        foreign_causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
-    except Exception:
-        foreign_causality = None
-    try:
-        part_causality = analysis.causality_by_participant(ticker, max_lags=5)
-    except Exception:
-        part_causality = pd.DataFrame()
-    try:
-        broker_causality = analysis.causality_by_broker(ticker, top_n=15, max_lags=5)
-    except Exception:
-        broker_causality = pd.DataFrame()
+    # Causality Data (Tanpa try-catch agar error terlihat)
+    foreign_causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
+    part_causality = analysis.causality_by_participant(ticker, max_lags=5)
+    broker_causality = analysis.causality_by_broker(ticker, top_n=15, max_lags=5)
 
     def get_english_text(val):
         return {"Asing": "Foreign", "Lokal": "Local", "Pemerintah": "Government"}.get(str(val), val)
