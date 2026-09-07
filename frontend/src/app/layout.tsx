@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
-      <body className="min-h-screen">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <body className="min-h-screen bg-[#0B0E14] text-[#E6E0E9]">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
         </ThemeProvider>
       </body>

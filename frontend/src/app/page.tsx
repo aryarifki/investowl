@@ -58,7 +58,6 @@ export default function TickerPage() {
     return availableTickers.filter((t: string) => t.includes(searchQuery.toUpperCase())).slice(0, 8);
   }, [searchQuery, availableTickers]);
 
-  // Kirim parameter horizon, min_events, min_net_buy ke backend
   const qs = `?lookback_days=${windowDays}&horizon=${horizon}&min_events=${minEvents}&min_net_buy_b=${minNetBuy}`;
   const { data, error, isLoading } = useSWR(
     ticker ? `http://127.0.0.1:8080/api/v1/dashboard/${ticker}/dashboard${qs}` : null,
@@ -110,34 +109,6 @@ export default function TickerPage() {
             </button>
           </div>
           
-          {/* Search Ticker */}
-          <div>
-            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Search Ticker</label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
-                <MagnifyingGlass size={16} weight="bold" />
-              </div>
-              <input 
-                type="text"
-                placeholder="Type ticker (e.g. BBCA)..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value.toUpperCase()); setShowDropdown(true); }}
-                onFocus={() => setShowDropdown(true)}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-              />
-              {showDropdown && filteredTickers.length > 0 && (
-                <div className="absolute top-full mt-1 w-full bg-[#151B26] border border-[#232B3B] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                  {filteredTickers.map((t: string) => (
-                    <button key={t} onClick={() => handleSelectTicker(t)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#232B3B] transition-colors">
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
           <div>
             <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Analysis Date</label>
             <select className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm">
@@ -152,7 +123,6 @@ export default function TickerPage() {
             </select>
           </div>
 
-          {/* VALIDATION HORIZON KEMBALI ADA DI SINI */}
           <div>
             <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Validation Horizon</label>
             <select 
@@ -254,6 +224,30 @@ export default function TickerPage() {
                     <div>
                       <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">IDX Broker Flow Research</div>
                       <h1 className="text-xl sm:text-2xl font-bold">Smart Money Dashboard</h1>
+                    </div>
+                    {/* KOLOM PENCARIAN KEMBALI DI HEADER */}
+                    <div className="relative w-full sm:w-64">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
+                        <MagnifyingGlass size={16} weight="bold" />
+                      </div>
+                      <input 
+                        type="text"
+                        placeholder="Search ticker..."
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value.toUpperCase()); setShowDropdown(true); }}
+                        onFocus={() => setShowDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                        className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                      {showDropdown && filteredTickers.length > 0 && (
+                        <div className="absolute top-full mt-1 w-full bg-[#151B26] border border-[#232B3B] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                          {filteredTickers.map((t: string) => (
+                            <button key={t} onClick={() => handleSelectTicker(t)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#232B3B] transition-colors">
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">

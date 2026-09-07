@@ -1,47 +1,70 @@
 "use client";
 import { MetricCard } from "@/components/metric-card";
 
+// Mapping teks Inggris seperti di app.py
+function english_text(value: any): any {
+  if (value === null || value === undefined) return value;
+  const mapping: { [key: string]: string } = {
+    "Asing": "Foreign",
+    "Lokal": "Local",
+    "Pemerintah": "Government",
+    "AKUMULASI_KUAT": "Strong Accumulation",
+    "AKUMULASI": "Accumulation",
+    "DISTRIBUSI_KUAT": "Strong Distribution",
+    "DISTRIBUSI": "Distribution",
+    "NETRAL": "Neutral",
+  };
+  return mapping[String(value)] || value;
+}
+
 export function CausalityTab({ data }: { data: any }) {
   if (!data) return null;
 
+  // Data dari backend
   const foreignCausality = data.foreign_causality;
   const partCausality = data.part_causality || [];
   const brokerCausality = data.broker_causality || [];
+  
+  // Nilai untuk Metric Cards
+  const scoreValue = data.conviction_score;
+  const scoreToneName = scoreValue >= 70 ? "positive" : scoreValue >= 40 ? "warning" : "negative";
+  const brokerNote = data.conviction_breakdown?.broker_note || "-";
 
   return (
     <div className="space-y-4">
       <div className="bg-[#151B26] border border-[#232B3B] rounded-md p-4">
         <h3 className="text-sm font-bold mb-4">Causality Insight</h3>
         
-        {/* 3 Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* 3 Metric Cards (Persis app.py) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
           <MetricCard 
             label="Foreign Flow Granger" 
-            value={foreignCausality ? (foreignCausality.is_significant ? "Significant" : "Not significant") : "Unavailable"} 
+            value={foreignCausality ? (foreignCausality.is_significant ? "Significant" : "Not Significant") : "Unavailable"} 
             note={foreignCausality ? `p=${foreignCausality.min_p_value?.toFixed(4)}, lag ${foreignCausality.best_lag}` : "insufficient observations"} 
             tone={foreignCausality ? (foreignCausality.is_significant ? "positive" : "warning") : "warning"} 
           />
           <MetricCard 
             label="Conviction Model" 
-            value={`${data.conviction_score?.toFixed(1) || "-"}/100`} 
-            note="weighted validation score" 
-            tone={data.conviction_score >= 70 ? "positive" : data.conviction_score >= 40 ? "warning" : "negative"} 
+            value={`${scoreValue?.toFixed(1) || "-"}/100`} 
+            note="hover score card for formula" 
+            tone={scoreToneName} 
+            title={data.breakdown}
           />
           <MetricCard 
             label="Broker Validation" 
-            value={data.conviction_breakdown?.broker_note || "-"} 
+            value={brokerNote} 
             note="historical forward returns" 
             tone={null} 
           />
         </div>
 
-        {/* Score Breakdown */}
+        {/* Score Breakdown Tooltip (Persis app.py) */}
         <div className="mb-6 p-3 bg-[#0B0E14] rounded-md text-xs text-[#94A3B8] border border-[#232B3B]">
           <span className="font-bold text-[#E6E0E9]">Score Breakdown: </span>
           {data.breakdown}
         </div>
 
-        {/* 2 Tables */}
+        {/* 2 Kolom Tabel (Persis app.py) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Participant Type */}
           <div>
@@ -62,7 +85,7 @@ export function CausalityTab({ data }: { data: any }) {
                   <tbody>
                     {partCausality.map((row: any, i: number) => (
                       <tr key={i} className="table-row">
-                        <td className="py-2 px-3 text-[#E6E0E9]">{row.participant}</td>
+                        <td className="py-2 px-3 text-[#E6E0E9]">{english_text(row.participant)}</td>
                         <td className="py-2 px-3 text-right font-mono text-[#94A3B8]">{row.lag}</td>
                         <td className="py-2 px-3 text-right font-mono text-[#94A3B8]">{row.p_value?.toFixed(4)}</td>
                         <td className="py-2 px-3 text-center">
