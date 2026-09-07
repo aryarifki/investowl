@@ -7,7 +7,8 @@ import re
 from app.services.analysis_service import (
     safe_val, df_to_records, return_to_date, conviction_score, 
     contradiction_alerts, sparkline_values, profile_flow_from_activity, 
-    profile_broker_detail_table, smart_daily_from_activity, fmt_signal
+    profile_broker_detail_table, smart_daily_from_activity, fmt_signal,
+    score_tone, fmt_pct
 )
 from idx_bandarmology import analysis, storage
 
@@ -53,7 +54,6 @@ async def get_dashboard_data(
         
         top_buy, top_sell = analysis.top_net_broker_summary(ticker, trade_date=activity_date, top_n=6)
         
-        # Error handling untuk Machine Learning yang berat (Granger & Alpha Scan)
         try:
             causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
         except Exception:
@@ -64,16 +64,34 @@ async def get_dashboard_data(
         except Exception:
             scan_10d = pd.DataFrame()
         
-        # Perbaikan argumen di sini (causality dihapus karena sudah dihitung di dalam service)
-        conviction = conviction_score(signal_row.get("bandar_signal"), foreign_5d, scan_10d, ticker)
+        conviction = conviction_score(signal_row.get("bandar_signal"), foreign_5d, scan_10d, ticker, causality)
         alerts = contradiction_alerts(signal_row.get("bandar_signal"), ret_5d, ret_10d, foreign_5d, smart_cum)
         
+        # Fix Verdict Logic (Sama persis dengan app.py)
         sig_10d = scan_10d[scan_10d["significant"].eq(True)].copy() if not scan_10d.empty else pd.DataFrame()
         if sig_10d.empty:
-            verdict = f"{ticker} shows {fmt_signal(signal_row.get('bandar_signal'))}. The current read is directional, but broker-specific 10D validation is not yet statistically strong."
+            verdict = (
+                f"{ticker} shows {fmt_signal(signal_row.get('bandar_signal'))} with {fmt_pct(ret_5d)} over 5D and "
+                f"{fmt_pct(ret_10d)} over 10D. The current read is directional, but broker-specific 10D validation is not yet statistically strong."
+            )
         else:
             best = sig_10d.sort_values(["p_value_one_sided", "mean_fwd_return"], ascending=[True, False]).iloc[0]
-            verdict = f"{ticker} shows {fmt_signal(signal_row.get('bandar_signal'))}. Broker {best['broker_code']} is the strongest 10D validation: {int(best['n_events'])} events, win rate {best['win_rate']:.0%}, p-value {best['p_value_one_sided']:.4f}."
+            verdict = (
+                f"{ticker} shows {fmt_signal(signal_row.get('bandar_signal'))}. Broker {best['broker_code']} is the strongest 10D validation: "
+                f"{int(best['n_events'])} events, mean return {fmt_pct(best['mean_fwd_return'])}, "
+                f"win rate {best['win_rate']:.0%}, p-value {best['p_value_one_sided']:.4f}."
+            )
+
+        # Score Tone & Breakdown (Sama persis dengan app.py)
+        score_value = float(conviction["score"])
+        score_tone_name, score_color = score_tone(score_value)
+        breakdown = (
+            f"Granger p-value component: {conviction['causality_component']:.0f}/100 "
+            f"(p={conviction['p_value'] if conviction['p_value'] is not None and pd.notna(conviction['p_value']) else 'n/a'}); "
+            f"Signal component: {conviction['signal_component']:.0f}/100; "
+            f"Foreign 5D component: {conviction['foreign_component']:.0f}/100; "
+            f"Broker win-rate component: {conviction['broker_component']:.0f}/100 ({conviction['broker_note']})."
+        )
 
         top_brokers_compact = []
         for side, df in (("Buy", top_buy.head(3)), ("Sell", top_sell.head(3))):
@@ -102,6 +120,10 @@ async def get_dashboard_data(
         px_context["date"] = px_context["date"].astype(str)
         px_context["bandar_signal"] = px_context["bandar_signal"].apply(fmt_signal)
 
+        # Ambil data Causality untuk Tab Causality
+        part_causality = df_to_records(analysis.causality_by_participant(ticker, max_lags=5))
+        broker_causality = df_to_records(analysis.causality_by_broker(ticker, top_n=15, max_lags=5))
+
         return {
             "ticker": ticker,
             "analysis_date": str(analysis_ts.date()),
@@ -121,7 +143,13 @@ async def get_dashboard_data(
             "price_performance": price_performance,
             "conviction_score": conviction["score"],
             "alerts": alerts,
-            "verdict": verdict
+            "verdict": verdict,
+            "score_tone_name": score_tone_name,
+            "breakdown": breakdown,
+            "broker_note": conviction["broker_note"],
+            "foreign_causality": causality,
+            "part_causality": part_causality,
+            "broker_causality": broker_causality
         }
 
     except Exception as e:
