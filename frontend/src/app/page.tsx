@@ -221,7 +221,7 @@ export default function TickerPage() {
 
                 {data && !error && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-                    <MetricCard label="Conviction Score" value={`${data.conviction_score?.toFixed(1) || "-"}/100`} note="weighted model" tone={data.conviction_score} />
+                    <MetricCard label="Conviction Score" value={`${data.conviction_score?.toFixed(1) || "-"}/100`} note="weighted model" tone={data.score_tone_name} title={data.breakdown} />
                     <MetricCard label="Signal" value={data.signal_row?.bandar_signal || "-"} note="selected date" tone={null} accent={data.signal_row?.bandar_signal_score >= 1 ? "#10b981" : data.signal_row?.bandar_signal_score <= -1 ? "#f43f5e" : "#94a3b8"} />
                     <MetricCard label="5D Return" value={fmtPct(data.ret_5d)} note="price context" tone={data.ret_5d} />
                     <MetricCard label="Foreign Net 5D" value={fmtRp(data.foreign_5d)} note="broker summary" tone={data.foreign_5d} />
@@ -267,7 +267,7 @@ export default function TickerPage() {
                 <div className="pb-8">
                   {activeTab === "Overview" && data && !error && <OverviewTab data={data} />}
                   {activeTab === "Broker Flow" && <BrokerFlowTab ticker={ticker} windowDays={windowDays} />}
-                  {activeTab === "Causality" && <CausalityTab />}
+                  {activeTab === "Causality" && data && !error && <CausalityTab data={data} />}
                   {activeTab === "Validation" && <ValidationTab />}
                   {activeTab === "Screener" && <ScreenerTab />}
                   {activeTab === "Raw Tables" && <RawTablesTab />}
