@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.endpoints import bandarmology, dashboard, stocks, idx_test
+from app.api.v1.endpoints import bandarmology, dashboard, stocks, idx_test, broker_flow
 
 app = FastAPI(
     title="IDX Bandarmology SaaS API",
@@ -18,6 +18,7 @@ app.add_middleware(
 
 app.include_router(bandarmology.router, prefix="/api/v1/bandarmology", tags=["Bandarmology"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
+app.include_router(broker_flow.router, prefix="/api/v1/broker_flow", tags=["Broker Flow"])
 app.include_router(stocks.router, prefix="/api/v1/stocks", tags=["Stocks"])
 app.include_router(idx_test.router, prefix="/api/v1/idx_test", tags=["IDX API Test"])
 

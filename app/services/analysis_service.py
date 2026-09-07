@@ -362,3 +362,112 @@ def contradiction_alerts(signal: object, ret_5d: float | None, ret_10d: float | 
     if smart_cum is not None and smart_cum < 0 and raw in ACC_SIGNALS:
         alerts.append("Signal is accumulation but smart-money cumulative flow is negative in the selected window.")
     return alerts
+
+# ==========================================
+# BROKER FLOW FUNCTIONS (untuk tab Broker Flow)
+# ==========================================
+
+def estimated_broker_paths(dist: pd.DataFrame, top_n: int = 8) -> pd.DataFrame:
+    """Estimasi jalur buyer-seller berdasarkan net value."""
+    if dist.empty: return pd.DataFrame()
+    buyers = dist[dist["net_value"] > 0].copy().sort_values("net_value", ascending=False).head(top_n)
+    sellers = dist[dist["net_value"] < 0].copy().sort_values("net_value", ascending=True).head(top_n)
+    if buyers.empty or sellers.empty: return pd.DataFrame()
+    
+    buyers["remaining"] = buyers["net_value"].astype(float)
+    sellers["remaining"] = sellers["net_value"].abs().astype(float)
+    edges = []
+    seller_idx = 0
+    seller_rows = sellers.reset_index(drop=True)
+    buyer_rows = buyers.reset_index(drop=True)
+    
+    for buyer_i in range(len(buyer_rows)):
+        buyer_left = float(buyer_rows.loc[buyer_i, "remaining"])
+        while buyer_left > 1e-9 and seller_idx < len(seller_rows):
+            seller_left = float(seller_rows.loc[seller_idx, "remaining"])
+            if seller_left <= 1e-9:
+                seller_idx += 1
+                continue
+            matched = min(buyer_left, seller_left)
+            edges.append({
+                "buyer_code": buyer_rows.loc[buyer_i, "broker_code"],
+                "buyer_type": participant_label(buyer_rows.loc[buyer_i, "participant_type"]),
+                "seller_code": seller_rows.loc[seller_idx, "broker_code"],
+                "seller_type": participant_label(seller_rows.loc[seller_idx, "participant_type"]),
+                "matched_value": matched
+            })
+            buyer_left -= matched
+            seller_rows.loc[seller_idx, "remaining"] = seller_left - matched
+            if seller_rows.loc[seller_idx, "remaining"] <= 1e-9:
+                seller_idx += 1
+        buyer_rows.loc[buyer_i, "remaining"] = buyer_left
+    return pd.DataFrame(edges)
+
+def broker_summary_table(dist: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    """Tabel summary buy/sell broker."""
+    if dist.empty: return pd.DataFrame()
+    buyers = dist[dist["net_value"] > 0].copy().sort_values("net_value", ascending=False).head(top_n).reset_index(drop=True)
+    sellers = dist[dist["net_value"] < 0].copy().sort_values("net_value", ascending=True).head(top_n).reset_index(drop=True)
+    rows = []
+    max_len = max(len(buyers), len(sellers))
+    for i in range(max_len):
+        row = {}
+        if i < len(buyers):
+            b = buyers.iloc[i]
+            row.update({
+                "Buy Broker": b["broker_code"], "Buy Type": participant_label(b["participant_type"]),
+                "Buy Value": b.get("buy_value", 0), "Buy Lot": b.get("buy_lot", 0), "Buy Avg": b.get("buy_avg_price", 0)
+            })
+        else:
+            row.update({"Buy Broker": "", "Buy Type": "", "Buy Value": None, "Buy Lot": None, "Buy Avg": None})
+        if i < len(sellers):
+            s = sellers.iloc[i]
+            row.update({
+                "Sell Broker": s["broker_code"], "Sell Type": participant_label(s["participant_type"]),
+                "Sell Value": s.get("sell_value", 0), "Sell Lot": s.get("sell_lot", 0), "Sell Avg": s.get("sell_avg_price", 0)
+            })
+        else:
+            row.update({"Sell Broker": "", "Sell Type": "", "Sell Value": None, "Sell Lot": None, "Sell Avg": None})
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+def broker_distribution_data(activity_window: pd.DataFrame, dist_start, dist_end) -> dict:
+    """Siapkan data untuk Sankey diagram dan tabel distribution."""
+    dist = activity_window[
+        (activity_window["date"] >= dist_start) & (activity_window["date"] <= dist_end)
+    ].copy()
+    
+    if not dist.empty:
+        dist = dist.groupby(["broker_code", "participant_type"], dropna=False).agg(
+            buy_value=("buy_value", "sum"),
+            sell_value=("sell_value", "sum"),
+            net_value=("net_value", "sum"),
+            frequency=("frequency", "sum"),
+            buy_lot=("buy_lot", "sum"),
+            sell_lot=("sell_lot", "sum"),
+            buy_avg_price=("buy_avg_price", "mean"),
+            sell_avg_price=("sell_avg_price", "mean")
+        ).reset_index()
+    
+    if dist.empty:
+        return {"dist": [], "paths": [], "summary": [], "detail": []}
+    
+    paths = estimated_broker_paths(dist, top_n=8)
+    summary = broker_summary_table(dist, top_n=10)
+    
+    # Detail rows dengan sub-type
+    detail = dist[["broker_code", "participant_type", "buy_value", "sell_value", "net_value", "frequency"]].copy()
+    detail["Type"] = detail["participant_type"].map(participant_label)
+    detail["Avg Value / Tx"] = detail.apply(lambda r: abs(float(r["net_value"] or 0)) / max(float(r["frequency"] or 0), 1), axis=1)
+    detail["Sub-type"] = detail.apply(broker_subtype, axis=1)
+    detail = detail.rename(columns={
+        "broker_code": "Broker", "buy_value": "Buy", "sell_value": "Sell",
+        "net_value": "Net", "frequency": "Freq"
+    })
+    
+    return {
+        "dist": df_to_records(dist),
+        "paths": df_to_records(paths),
+        "summary": df_to_records(summary),
+        "detail": df_to_records(detail)
+    }
