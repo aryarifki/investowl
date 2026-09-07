@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { List, X, Database, ChartBar, FlowArrow, Graph, CheckCircle, MagnifyingGlass, Table, House, Globe, Buildings, Lightning } from "@phosphor-icons/react";
+import { List, X, Database, ChartBar, FlowArrow, Graph, CheckCircle, MagnifyingGlass, Table, House, Globe, Buildings, Lightning, ArrowsClockwise } from "@phosphor-icons/react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { MetricCard, fmtRp, fmtPct, signedColor } from "@/components/metric-card";
 import { OverviewTab } from "@/components/tabs/overview-tab";
@@ -15,7 +15,6 @@ import { PlaceholderPage } from "@/components/pages/placeholder-page";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// Tab di dalam Dashboard Utama
 const DASHBOARD_TABS = [
   { name: "Overview", icon: ChartBar },
   { name: "Broker Flow", icon: FlowArrow },
@@ -25,7 +24,6 @@ const DASHBOARD_TABS = [
   { name: "Raw Tables", icon: Table },
 ];
 
-// Navigasi Bawah (Mobile & Desktop)
 const BOTTOM_NAV = [
   { name: "Dashboard", icon: House },
   { name: "Broker", icon: FlowArrow },
@@ -39,19 +37,17 @@ const WINDOWS = [20, 30, 60, 90, 180];
 export default function TickerPage() {
   const [ticker, setTicker] = useState("BBCA");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // State untuk Navigasi Bawah (Halaman Utama)
   const [activePage, setActivePage] = useState("Dashboard");
-  
-  // State untuk Tab di dalam Dashboard
   const [activeTab, setActiveTab] = useState("Overview");
   const [windowDays, setWindowDays] = useState(60);
-  
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncInfo, setSyncInfo] = useState<{latest_broker_date: string | null, latest_price_date: string | null, active_count: number | null} | null>(null);
 
-  const { data: tickersData } = useSWR("http://127.0.0.1:8080/api/v1/stocks/available_tickers", fetcher);
+  const { data: tickersData, mutate: mutateTickers } = useSWR("http://127.0.0.1:8080/api/v1/stocks/available_tickers", fetcher);
   const availableTickers = tickersData?.tickers || [];
+  const tickerCount = syncInfo?.active_count || tickersData?.count || availableTickers.length;
 
   const filteredTickers = useMemo(() => {
     if (!searchQuery) return availableTickers.slice(0, 8);
@@ -70,13 +66,31 @@ export default function TickerPage() {
     setShowDropdown(false);
   };
 
+  const handleSyncStocks = async () => {
+    setIsSyncing(true);
+    setSyncInfo(null);
+    try {
+      const res = await fetch("http://127.0.0.1:8080/api/v1/stocks/sync_latest_data", { method: "POST" });
+      const syncData = await res.json();
+      setSyncInfo({
+        latest_broker_date: syncData.latest_broker_date,
+        latest_price_date: syncData.latest_price_date,
+        active_count: syncData.active_count
+      });
+      mutateTickers();
+    } catch (e) {
+      console.error("Sync failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex pb-16 lg:pb-0">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed lg:sticky top-0 z-50 h-screen w-72 bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="p-4 space-y-5">
           <div className="flex justify-between items-center">
@@ -100,7 +114,36 @@ export default function TickerPage() {
               {WINDOWS.map((w) => <option key={w} value={w}>{w} calendar days</option>)}
             </select>
           </div>
+          
+          <div>
+            <button 
+              onClick={handleSyncStocks} 
+              disabled={isSyncing}
+              className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
+            >
+              <ArrowsClockwise size={16} weight="bold" className={isSyncing ? "animate-spin" : ""} />
+              {isSyncing ? "Syncing IDX..." : "Sync Latest Data"}
+            </button>
+            {syncInfo && (
+              <div className="mt-2 p-2 bg-neutral-100 dark:bg-neutral-800 rounded text-[10px] space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Active Stocks:</span>
+                  <span className="font-mono font-bold text-blue-500">{syncInfo.active_count || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Latest Broker DB:</span>
+                  <span className="font-mono font-bold text-blue-500">{syncInfo.latest_broker_date || "Empty"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Latest Price DB:</span>
+                  <span className="font-mono font-bold text-blue-500">{syncInfo.latest_price_date || "Empty"}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <hr className="border-neutral-200 dark:border-neutral-800" />
+          
           <div className="space-y-2">
             <button className="w-full bg-white dark:bg-neutral-800 hover:opacity-80 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
               Run latest pipeline to today
@@ -109,9 +152,7 @@ export default function TickerPage() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 min-w-0 flex flex-col">
-        {/* Top Header (Mobile & Desktop) */}
         <div className="flex items-center gap-3 px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
             <List size={20} />
@@ -122,6 +163,10 @@ export default function TickerPage() {
               <Database size={16} weight="bold" />
               <span>DB Date: {data?.analysis_date || "..."}</span>
             </div>
+            <div className="hidden md:flex items-center gap-1 text-xs text-neutral-500 bg-neutral-200 dark:bg-neutral-800 px-2 py-1 rounded-full">
+              <ChartBar size={14} weight="bold" />
+              <span>Active: {tickerCount}</span>
+            </div>
             <ModeToggle />
           </div>
         </div>
@@ -129,7 +174,6 @@ export default function TickerPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-4 py-4">
             
-            {/* KONTEN HALAMAN DASHBOARD */}
             {activePage === "Dashboard" && (
               <>
                 <div className="mb-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
@@ -201,7 +245,6 @@ export default function TickerPage() {
                   </div>
                 )}
 
-                {/* Tab Navigasi (Dipindah ke bawah Current Read) */}
                 <div className="border-b border-neutral-200 dark:border-neutral-800 mb-4 mt-6">
                   <div className="flex gap-1 overflow-x-auto">
                     {DASHBOARD_TABS.map((tab) => (
@@ -232,7 +275,6 @@ export default function TickerPage() {
               </>
             )}
 
-            {/* KONTEN HALAMAN LAINNYA (Placeholder) */}
             {activePage === "Broker" && (
               <PlaceholderPage title="Broker Analysis" description="Halaman ini akan berisi analisis mendalam per broker (akumulasi/distribusi historis)." />
             )}
@@ -250,7 +292,6 @@ export default function TickerPage() {
         </div>
       </main>
 
-      {/* Bottom Navigation (Global) */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex justify-around items-center h-16">
         {BOTTOM_NAV.map((nav) => {
           const Icon = nav.icon;
