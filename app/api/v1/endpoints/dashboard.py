@@ -62,9 +62,12 @@ def _broker_win_component(scan_df, ticker):
     return max(0, min(100, win_rate * 100)), str(row.get("broker_code", "-")) + " win rate " + "{:.0%}".format(win_rate)
 
 def _conviction_score(signal, foreign_5d, scan_df, ticker):
-    # Hapus try-catch agar error Granger terlihat jika ada
-    causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
-    
+    # Kembalikan try-catch agar jika Granger error, p_value dianggap None (50)
+    try:
+        causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
+    except Exception:
+        causality = None
+        
     p_value = None if not causality else float(causality.get("min_p_value", np.nan))
     p_score = _p_value_component(p_value)
     s_score = _label_component(signal)
@@ -240,10 +243,21 @@ def ticker_detail(ticker: str, analysis_date: str = None, lookback_days: int = 6
         for _, row in broker_window[["date", "bandar_signal", "bandar_signal_score"]].copy().iterrows():
             signal_overlay.append({"date": str(row["date"]), "signal": _fmt_signal(row["bandar_signal"]), "score": float(row["bandar_signal_score"]) if pd.notna(row["bandar_signal_score"]) else None})
 
-    # Causality Data (Tanpa try-catch agar error terlihat)
-    foreign_causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
-    part_causality = analysis.causality_by_participant(ticker, max_lags=5)
-    broker_causality = analysis.causality_by_broker(ticker, top_n=15, max_lags=5)
+    # Causality Data dengan try-catch agar tidak 500
+    try:
+        foreign_causality = analysis.causality_foreign_vs_price(ticker, max_lags=5)
+    except Exception:
+        foreign_causality = None
+        
+    try:
+        part_causality = analysis.causality_by_participant(ticker, max_lags=5)
+    except Exception:
+        part_causality = pd.DataFrame()
+        
+    try:
+        broker_causality = analysis.causality_by_broker(ticker, top_n=15, max_lags=5)
+    except Exception:
+        broker_causality = pd.DataFrame()
 
     def get_english_text(val):
         return {"Asing": "Foreign", "Lokal": "Local", "Pemerintah": "Government"}.get(str(val), val)
