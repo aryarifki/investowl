@@ -71,6 +71,10 @@ async def get_broker_flow_data(
 
         dist_data = broker_distribution_data(activity_window, pd.Timestamp(dist_start_date), pd.Timestamp(dist_end_date))
 
+        # 4. Raw Activity Data untuk Chart Compare
+        activity_data = activity_window[["date", "broker_code", "net_value"]].copy()
+        activity_data["date"] = activity_data["date"].astype(str)
+
         return {
             "ticker": ticker,
             "analysis_date": str(analysis_ts.date()),
@@ -83,7 +87,8 @@ async def get_broker_flow_data(
             "broker_distribution": dist_data,
             "available_dist_dates": [str(d) for d in available_dist_dates],
             "dist_start": str(dist_start_date),
-            "dist_end": str(dist_end_date)
+            "dist_end": str(dist_end_date),
+            "activity_data": df_to_records(activity_data)
         }
 
     except Exception as e:
