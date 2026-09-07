@@ -33,6 +33,7 @@ const BOTTOM_NAV = [
 ];
 
 const WINDOWS = [20, 30, 60, 90, 180];
+const HORIZONS = [1, 3, 5, 10];
 
 export default function TickerPage() {
   const [ticker, setTicker] = useState("BBCA");
@@ -40,6 +41,9 @@ export default function TickerPage() {
   const [activePage, setActivePage] = useState("Dashboard");
   const [activeTab, setActiveTab] = useState("Overview");
   const [windowDays, setWindowDays] = useState(60);
+  const [horizon, setHorizon] = useState(10);
+  const [minEvents, setMinEvents] = useState(5);
+  const [minNetBuy, setMinNetBuy] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -54,7 +58,8 @@ export default function TickerPage() {
     return availableTickers.filter((t: string) => t.includes(searchQuery.toUpperCase())).slice(0, 8);
   }, [searchQuery, availableTickers]);
 
-  const qs = `?lookback_days=${windowDays}`;
+  // Kirim parameter horizon, min_events, min_net_buy ke backend
+  const qs = `?lookback_days=${windowDays}&horizon=${horizon}&min_events=${minEvents}&min_net_buy_b=${minNetBuy}`;
   const { data, error, isLoading } = useSWR(
     ticker ? `http://127.0.0.1:8080/api/v1/dashboard/${ticker}/dashboard${qs}` : null,
     fetcher
@@ -104,17 +109,83 @@ export default function TickerPage() {
               <X size={20} />
             </button>
           </div>
+          
+          {/* Search Ticker */}
+          <div>
+            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Search Ticker</label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
+                <MagnifyingGlass size={16} weight="bold" />
+              </div>
+              <input 
+                type="text"
+                placeholder="Type ticker (e.g. BBCA)..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value.toUpperCase()); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+              {showDropdown && filteredTickers.length > 0 && (
+                <div className="absolute top-full mt-1 w-full bg-[#151B26] border border-[#232B3B] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {filteredTickers.map((t: string) => (
+                    <button key={t} onClick={() => handleSelectTicker(t)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#232B3B] transition-colors">
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Analysis Date</label>
             <select className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm">
               <option>{data?.analysis_date || "Latest Available"}</option>
             </select>
           </div>
+          
           <div>
             <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Broker Window</label>
             <select className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm" value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>
               {WINDOWS.map((w) => <option key={w} value={w}>{w} calendar days</option>)}
             </select>
+          </div>
+
+          {/* VALIDATION HORIZON KEMBALI ADA DI SINI */}
+          <div>
+            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Validation Horizon</label>
+            <select 
+              className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm" 
+              value={horizon} 
+              onChange={(e) => setHorizon(Number(e.target.value))}
+            >
+              {HORIZONS.map((h) => <option key={h} value={h}>{h} trading days</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Min Broker Events</label>
+            <input 
+              type="number" 
+              min={3} 
+              max={30} 
+              className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm" 
+              value={minEvents} 
+              onChange={(e) => setMinEvents(Number(e.target.value))} 
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5">Min Net Buy, Rp B</label>
+            <input 
+              type="number" 
+              min={0} 
+              step={0.5} 
+              className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg px-3 py-2 text-sm" 
+              value={minNetBuy} 
+              onChange={(e) => setMinNetBuy(Number(e.target.value))} 
+            />
           </div>
           
           <div>
@@ -156,7 +227,7 @@ export default function TickerPage() {
 
       <main className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-center gap-3 px-4 py-3 bg-[#151B26] border-b border-[#232B3B] sticky top-0 z-30">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-[#0B0E14] border border-[#232B3B]">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-[#0B0E14] border border-[#232B3B] lg:hidden">
             <List size={20} />
           </button>
           <span className="font-bold text-lg">{activePage === "Dashboard" ? ticker : activePage}</span>
@@ -183,29 +254,6 @@ export default function TickerPage() {
                     <div>
                       <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">IDX Broker Flow Research</div>
                       <h1 className="text-xl sm:text-2xl font-bold">Smart Money Dashboard</h1>
-                    </div>
-                    <div className="relative w-full sm:w-64">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]">
-                        <MagnifyingGlass size={16} weight="bold" />
-                      </div>
-                      <input 
-                        type="text"
-                        placeholder="Search ticker..."
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value.toUpperCase()); setShowDropdown(true); }}
-                        onFocus={() => setShowDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                        className="w-full bg-[#0B0E14] border border-[#232B3B] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                      {showDropdown && filteredTickers.length > 0 && (
-                        <div className="absolute top-full mt-1 w-full bg-[#151B26] border border-[#232B3B] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                          {filteredTickers.map((t: string) => (
-                            <button key={t} onClick={() => handleSelectTicker(t)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#232B3B] transition-colors">
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
