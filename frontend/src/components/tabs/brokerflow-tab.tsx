@@ -22,13 +22,11 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
   const [flowMode, setFlowMode] = useState("Cumulative");
   const [selectedProfile, setSelectedProfile] = useState("All Profiles");
   
-  // State untuk Distribusi
   const [distMode, setDistMode] = useState("Single day");
   const [distDate, setDistDate] = useState("");
   const [distStart, setDistStart] = useState("");
   const [distEnd, setDistEnd] = useState("");
   
-  // State Dropdown Brokers
   const [brokerDropdownOpen, setBrokerDropdownOpen] = useState(false);
   const brokerDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -38,7 +36,24 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     fetcher
   );
 
-  // Set default distDate saat data pertama kali load
+  const paths = data?.broker_distribution?.paths || [];
+  
+  const sankeyData = useMemo(() => {
+    if (paths.length === 0) return [];
+    const buyerTotals: { [key: string]: number } = {};
+    const sellerTotals: { [key: string]: number } = {};
+    
+    paths.forEach((p: any) => {
+      buyerTotals[p.buyer_code] = (buyerTotals[p.buyer_code] || 0) + p.matched_value;
+      sellerTotals[p.seller_code] = (sellerTotals[p.seller_code] || 0) + p.matched_value;
+    });
+    
+    const buyers = Object.entries(buyerTotals).map(([code, val]) => ({ code, val, type: "Buyer" }));
+    const sellers = Object.entries(sellerTotals).map(([code, val]) => ({ code, val, type: "Seller" }));
+    
+    return [...buyers, ...sellers].sort((a, b) => b.val - a.val);
+  }, [paths]);
+
   useEffect(() => {
     if (data?.available_dist_dates && data.available_dist_dates.length > 0 && !distDate) {
       const latest = data.available_dist_dates[data.available_dist_dates.length - 1];
@@ -48,14 +63,12 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     }
   }, [data, distDate]);
 
-  // Set default selected brokers
   useEffect(() => {
     if (data?.default_codes && selectedBrokers.length === 0) {
       setSelectedBrokers(data.default_codes);
     }
   }, [data, selectedBrokers]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (brokerDropdownRef.current && !brokerDropdownRef.current.contains(event.target as Node)) {
@@ -90,7 +103,6 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     }
   };
 
-  // Prepare chart data for Broker Compare
   const activityData = data.broker_distribution?.dist || [];
   let chartData: any[] = [];
   
@@ -120,35 +132,15 @@ export function BrokerFlowTab({ ticker, windowDays }: { ticker: string; windowDa
     });
   }
 
-  // Prepare Profile Flow & Detail
   const profileFlow = data.profile_flow || [];
   const profileDetail = data.profile_broker_detail || [];
   const filteredProfileDetail = selectedProfile === "All Profiles" 
     ? profileDetail 
     : profileDetail.filter((r: any) => r.Profile === selectedProfile);
 
-  // Prepare Distribution Data
   const distData = data.broker_distribution || {};
-  const paths = distData.paths || [];
   const summary = distData.summary || [];
   const detail = distData.detail || [];
-
-  // Sankey-like Bar Chart Data (Top Buyers vs Sellers)
-  const sankeyData = useMemo(() => {
-    if (paths.length === 0) return [];
-    const buyerTotals: { [key: string]: number } = {};
-    const sellerTotals: { [key: string]: number } = {};
-    
-    paths.forEach((p: any) => {
-      buyerTotals[p.buyer_code] = (buyerTotals[p.buyer_code] || 0) + p.matched_value;
-      sellerTotals[p.seller_code] = (sellerTotals[p.seller_code] || 0) + p.matched_value;
-    });
-    
-    const buyers = Object.entries(buyerTotals).map(([code, val]) => ({ code, val, type: "Buyer" }));
-    const sellers = Object.entries(sellerTotals).map(([code, val]) => ({ code, val, type: "Seller" }));
-    
-    return [...buyers, ...sellers].sort((a, b) => b.val - a.val);
-  }, [paths]);
 
   return (
     <div className="space-y-4">
