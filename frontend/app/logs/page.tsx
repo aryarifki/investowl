@@ -1,4 +1,3 @@
-// app/logs/page.tsx
 "use client";
 
 import React, { useState } from 'react';
@@ -88,7 +87,7 @@ export default function LogsPage() {
         </div>
         
         <div className="p-4 h-[60vh] overflow-auto scrollbar-thin scrollbar-thumb-[var(--md-sys-color-outline-variant)]">
-          <pre className="text-[11px] sm:text-xs font-mono whitespace-pre-wrap text-[var(--md-sys-color-on-surface-variant)] dark:text-emerald-400/90 leading-relaxed">
+          <pre className="text-[11px] sm:text-xs font-mono whitespace-pre-wrap text-[var(--md-sys-color-on-surface)] dark:text-emerald-400/90 leading-relaxed">
             {currentLog}
           </pre>
         </div>
