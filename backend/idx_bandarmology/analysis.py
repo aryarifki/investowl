@@ -10,11 +10,24 @@ Designed to be used from a notebook:
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from math import erfc, sqrt
+
+class _LazyModule:
+    """Lazy module proxy to prevent costly 1-second eager imports of heavy plotting libraries."""
+    def __init__(self, mod_name: str):
+        self._mod_name = mod_name
+        self._mod = None
+
+    def __getattr__(self, item: str):
+        if self._mod is None:
+            import importlib
+            self._mod = importlib.import_module(self._mod_name)
+        return getattr(self._mod, item)
+
+plt = _LazyModule("matplotlib.pyplot")
+sns = _LazyModule("seaborn")
 
 from . import storage
 

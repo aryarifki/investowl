@@ -17,14 +17,17 @@ from sqlalchemy import create_engine, text
 
 from . import config
 
-# SQLAlchemy engine dengan Connection Pool yang stabil untuk FastAPI
-engine = create_engine(
-    config.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=10,
-    pool_recycle=1800,
-)
+# Gunakan shared engine dari database.py untuk mengeliminasi dual connection pool
+try:
+    from database import engine
+except Exception:
+    engine = create_engine(
+        config.DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=15,
+        max_overflow=10,
+        pool_recycle=1800,
+    )
 
 # ── schema ───────────────────────────────────────────────────────────────────
 _SCHEMA = """

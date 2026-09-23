@@ -10,10 +10,14 @@ load_dotenv()
 
 
 class Settings:
-    # Fail-fast: Aplikasi tidak akan jalan jika DATABASE_URL tidak ada di .env
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
     if not DATABASE_URL:
-        raise ValueError("DATABASE_URL tidak ditemukan di file .env")
+        user = os.environ.get("DB_USER", "bandar").strip()
+        password = os.environ.get("DB_PASSWORD", "bandar123").strip()
+        host = os.environ.get("DB_HOST", "localhost").strip()
+        port = os.environ.get("DB_PORT", "5432").strip()
+        dbname = os.environ.get("DB_NAME", "bandarmology").strip()
+        DATABASE_URL = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
 
     # Frontend Next.js origins allowed to call this API
     CORS_ORIGINS: list[str] = [
