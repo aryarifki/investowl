@@ -29,12 +29,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  experimental: {
-    optimizePackageImports: ['@iconify/react', 'recharts', 'echarts', 'echarts-for-react'],
-  },
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
-  },
   async rewrites() {
     const backendUrl = process.env.INTERNAL_BACKEND_URL || "http://127.0.0.1:8000";
     return [

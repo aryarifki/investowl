@@ -293,32 +293,30 @@ Re-Tracker/
 │   └── workflows/
 │       └── backend-ci.yml             # CI Pipeline GitHub Actions
 ├── backend/                           # Backend Service (Python / FastAPI)
-│   ├── app/
+│   ├── app/                           # Sub-modul bridge & router bandarmologi
+│   │   ├── idx_bridge.py              # Jembatan re-export paket idx_bandarmology
 │   │   └── routers/
-│   │       └── bandarmology.py        # Re-export stub (backward compatibility)
-│   ├── core/
-│   │   └── cache.py                   # Thread-Safe BoundedTTLCache (LRU + TTL)
-│   ├── idx_bandarmology/              # Mesin Kuantitatif Bandarmologi
-│   │   ├── analysis.py                # Profil broker & korelasi (Lazy proxy)
-│   │   ├── broker_api.py              # Klien API broker data
+│   │       └── bandarmology.py        # Controller analitik bandarmologi
+│   ├── idx_bandarmology/              # Quantitative & Ingestion Engine
+│   │   ├── analysis.py                # Profil broker & korelasi
+│   │   ├── broker_api.py              # Klien API broker data (Stockbit Exodus)
 │   │   ├── config.py                  # Konfigurasi modul bandarmologi
 │   │   ├── features.py                # Feature engineering
 │   │   ├── pipeline.py                # Pipeline orkestrasi ETL
 │   │   ├── prices.py                  # Scraper OHLCV data
-│   │   ├── storage.py                 # Persistensi data SQLAlchemy terpadu
+│   │   ├── storage.py                 # Persistensi data SQLAlchemy
 │   │   └── universe.py                # Resolusi master universe saham IDX
 │   ├── routers/                       # Modul Endpoint API FastAPI
 │   │   ├── auth.py                    # Autentikasi & manajemen approval user
-│   │   ├── bandarmology.py            # Endpoint analitik bandarmologi
 │   │   ├── broker.py                  # Endpoint time-series broker
 │   │   ├── foreign_flow.py            # Endpoint analitik foreign flow
 │   │   ├── signal.py                  # Endpoint AI composite signal
 │   │   ├── stocks.py                  # Endpoint candlestick OHLCV
 │   │   └── system.py                  # Endpoint log viewer & sistem status
-│   ├── services/
-│   │   └── foreign_analytics.py       # Model matematika: HMM, VAR IRF, & HHI
+│   ├── src/
+│   │   └── services/
+│   │       └── foreign_analytics.py   # Model matematika: HMM, VAR IRF, & HHI
 │   ├── tests/                         # Suite Pengujian Kualitas
-│   │   ├── test_api_regression.py     # Pengujian regresi endpoint, cache, & profil
 │   │   ├── test_bandarmology.py       # Pengujian algoritma greedy matching
 │   │   └── test_foreign_analytics.py  # Pengujian model ML HMM & VAR
 │   ├── config.py                      # Pydantic global settings
@@ -329,7 +327,12 @@ Re-Tracker/
 │   └── schemas.py                     # Schema validasi Pydantic
 ├── frontend/                          # Client Web (Next.js 16 / React 19)
 │   ├── app/                           # Next.js App Router
-│   │   ├── [ticker]/page.tsx          # Halaman ticker detail (Dynamic Tabs)
+│   │   ├── components/                # Komponen lokal App Router
+│   │   │   ├── ff/                    # Visualisasi Foreign Flow (Heatmap, HMM, VAR)
+│   │   │   ├── fmt.ts                 # Utilitas pemformatan angka
+│   │   │   ├── MetricCard.tsx         # Kartu metrik
+│   │   │   └── ui/Tabs.tsx            # Komponen tabs
+│   │   ├── [ticker]/page.tsx          # Halaman ticker detail
 │   │   ├── admin/page.tsx             # Halaman Admin User Approval
 │   │   ├── foreign/page.tsx           # Halaman Foreign Flow Makro
 │   │   ├── login/page.tsx             # Halaman Login Google SSO
@@ -340,14 +343,15 @@ Re-Tracker/
 │   │   └── page.tsx                   # Beranda & Quick Market Monitor
 │   ├── components/                    # Komponen Modular
 │   │   ├── analysis/                  # Tab komponen analitik detail ticker
-│   │   ├── foreign/                   # Komponen visualisasi foreign flow
 │   │   ├── home/                      # Komponen kartu ticker beranda
 │   │   ├── layout/                    # Layout shell (Sidebar, Navbar)
 │   │   ├── signal/SignalDashboard.tsx # Tabel sinyal & layer toggle filter
-│   │   └── ui/                        # Komponen UI atomis (MetricCard, Loader)
+│   │   ├── BrokerDetails.tsx          # Rincian transaksi broker
+│   │   ├── MainChart.tsx              # Candlestick chart TradingView
+│   │   ├── Watchlist.tsx              # Daftar pantauan
+│   │   └── ui/InvestOwlLoader.tsx     # Komponen UI animasi burung hantu
 │   ├── lib/
-│   │   ├── api.ts                     # SWR fetcher sentral
-│   │   └── format.ts                  # Utility pemformatan angka terpusat (DRY)
+│   │   └── api.ts                     # SWR fetcher sentral
 │   ├── next.config.ts                 # Konfigurasi Next.js & Turbopack
 │   ├── package.json                   # Dependensi JavaScript/TypeScript
 │   └── tailwind.config.ts             # Konfigurasi tema token MD3

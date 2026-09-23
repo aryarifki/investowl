@@ -11,11 +11,7 @@ const fetcher = (u: string) => fetch(u).then((r) => r.json());
 const LS_KEY = "tradepulse_watchlist";
 
 function WatchlistFetcher({ ticker, onRemove }: { ticker: string; onRemove?: (t: string) => void }) {
-  const { data, isLoading, error } = useSWR(`/api/bandar/detail/${ticker}?window_days=20`, fetcher, { 
-    revalidateOnFocus: false,
-    dedupingInterval: 60000,
-    keepPreviousData: true,
-  });
+  const { data, isLoading, error } = useSWR(`/api/bandar/detail/${ticker}?window_days=20`, fetcher, { revalidateOnFocus: false });
 
   if (isLoading) return (
      <div className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[20px] p-4 h-[96px] flex flex-col justify-between animate-pulse shadow-sm">
@@ -56,7 +52,8 @@ export default function HomeMobile() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    setBooted(true);
+    const timer = setTimeout(() => setBooted(true), 1200);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

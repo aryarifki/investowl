@@ -4,6 +4,22 @@ Seluruh perubahan penting pada proyek **Re-Tracker (The Investowl)** didokumenta
 
 ---
 
+## [1.1.1] - 2026-09-23
+
+### ⚡ Pemulihan Arsitektur Stabil & Responsif (Rollback Optimasi Eksperimental)
+- **Pemulihan Kecepatan Penuh**: Mengembalikan seluruh codebase backend dan frontend ke kondisi runtime stabil semula yang terbukti berkinerja sangat cepat (*instant*).
+- **Penghapusan Bottleneck Frontend**:
+  - Menghapus `experimental.optimizePackageImports` dari `next.config.ts` yang sebelumnya menyebabkan AST parsing lag puluhan detik pada modul grafik (`echarts` & `recharts`).
+  - Mengembalikan static bundle import pada seluruh tab analitik emiten di `frontend/app/[ticker]/page.tsx` sehingga perpindahan tab kembali instan (0 ms).
+  - Mengembalikan transisi render dan SWR data fetching pada `frontend/app/page.tsx`.
+- **Pemulihan Koneksi Database Backend**:
+  - Mengembalikan connection pool independen SQLAlchemy berukuran besar di `storage.py` (`pool_size=20`) untuk mencegah *connection starvation* saat request paralel.
+  - Menghapus mekanisme thread lock pada cache in-memory untuk concurrency maksimal.
+- **Klarifikasi Arsitektur**:
+  - Re-Tracker beroperasi murni sebagai **Presentation & Analytical Viewer Layer** untuk menyajikan data yang ditarik dan diolah oleh [SMtracker](https://github.com/aryarifki/SMtracker).
+
+---
+
 ## [1.1.0] - 2026-09-23
 
 ### ⚡ Ringkasan Pembaruan (Performance & Architecture Overhaul)

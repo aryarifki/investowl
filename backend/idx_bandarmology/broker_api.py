@@ -30,11 +30,7 @@ from . import config
 _BASE = "https://exodus.stockbit.com"
 _TIMEOUT = 15.0
 _CACHE_TTL = 300.0  # 5 minutes — upstream data is end-of-day and refreshes slowly.
-try:
-    from core.cache import BoundedTTLCache
-    _cache = BoundedTTLCache(maxsize=500, ttl_seconds=_CACHE_TTL)
-except Exception:
-    _cache: dict[str, tuple[float, Any]] = {}
+_cache: dict[str, tuple[float, Any]] = {}
 
 # ── rate limiter (token bucket) ────────────────────────────────────────────
 # Stockbit appears to allow ~40 requests per 5 minutes (~1 req / 7.5 s).

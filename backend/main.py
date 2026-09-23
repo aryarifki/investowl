@@ -15,11 +15,14 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+
 from config import settings
 from database import get_db
 from models import BrokerFlow
-from routers import stocks, broker, auth, signal, bandarmology, foreign_flow, system
+from routers import stocks, broker, auth, signal, system
+from app.routers import bandarmology
 from idx_bandarmology.universe import refresh_master_tickers
+from routers import foreign_flow
 
 
 # Inisialisasi Redis Terpusat untuk Rate Limiting

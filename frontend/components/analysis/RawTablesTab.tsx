@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@iconify/react";
-import { fmtRp } from "@/lib/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -41,7 +40,16 @@ export default function RawTablesTab({ ticker, analysisDate, windowDays }: RawTa
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentActRows = filteredActRows.slice(indexOfFirstRow, indexOfLastRow);
 
-
+  const fmtRp = (val: any) => {
+    if (val === null || val === undefined || Number.isNaN(val)) return "-";
+    if (Number(val) === 0) return "Rp 0";
+    const sign = val < 0 ? "-" : "";
+    const n = Math.abs(val);
+    if (n >= 1e12) return sign + "Rp " + (n / 1e12).toFixed(2) + " T";
+    if (n >= 1e9) return sign + "Rp " + (n / 1e9).toFixed(2) + " B";
+    if (n >= 1e6) return sign + "Rp " + (n / 1e6).toFixed(2) + " M";
+    return sign + "Rp " + n.toLocaleString("id-ID");
+  };
 
   const getTypeChip = (type: string) => {
     const t = (type || "").toUpperCase();

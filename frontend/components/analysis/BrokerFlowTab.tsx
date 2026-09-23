@@ -14,9 +14,31 @@ import {
   ReferenceLine,
 } from "recharts";
 
-import { fmtRp, signedColor, getProfileTextColor } from "@/lib/format";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+/* ==================== Formatters ==================== */
+function fmtRp(n: number | null): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return "-";
+  const sign = n < 0 ? "-" : "";
+  const v = Math.abs(n);
+  if (v >= 1e12) return sign + "Rp " + (v / 1e12).toFixed(2) + " T";
+  if (v >= 1e9) return sign + "Rp " + (v / 1e9).toFixed(2) + " B";
+  if (v >= 1e6) return sign + "Rp " + (v / 1e6).toFixed(2) + " M";
+  return sign + "Rp " + v.toLocaleString("id-ID");
+}
+
+function signedColor(n: number): string {
+  return n >= 0 ? "var(--color-positive)" : "var(--color-negative)";
+}
+
+function getProfileTextColor(label: string) {
+  const l = label.toLowerCase();
+  if (l.includes("foreign smart")) return "var(--color-positive)"; 
+  if (l.includes("local inst")) return "#3b82f6"; 
+  if (l.includes("market maker")) return "#a855f7"; 
+  if (l.includes("speculative")) return "#f59e0b"; 
+  return "var(--md-sys-color-on-surface-variant)"; 
+}
 
 const COLORS = ["#3b82f6", "var(--color-negative)", "var(--color-positive)", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#6366f1"];
 

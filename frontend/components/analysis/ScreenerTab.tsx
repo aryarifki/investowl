@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@iconify/react";
-import { fmtRp } from "@/lib/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -43,7 +42,15 @@ export default function ScreenerTab({ universeMode, analysisDate, windowDays, cu
     });
   }
 
-
+  const fmtRp = (val: number) => {
+    if (!val) return "-";
+    const sign = val < 0 ? "-" : "";
+    const n = Math.abs(val);
+    if (n >= 1e12) return sign + "Rp " + (n / 1e12).toFixed(2) + " T";
+    if (n >= 1e9) return sign + "Rp " + (n / 1e9).toFixed(2) + " B";
+    if (n >= 1e6) return sign + "Rp " + (n / 1e6).toFixed(2) + " M";
+    return sign + "Rp " + n.toLocaleString("id-ID");
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">

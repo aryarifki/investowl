@@ -4,7 +4,6 @@ import React, { useState, useMemo } from "react";
 import useSWR from "swr";
 import { Icon } from "@iconify/react";
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { fmtRp, fmtPct } from "@/lib/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -65,6 +64,20 @@ export default function ValidationTab({ ticker, analysisDate, windowDays, univer
   if (isLoading) return <div className="p-8 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] flex items-center justify-center gap-3 text-[var(--md-sys-color-on-surface-variant)] shadow-sm animate-pulse"><Icon icon="ph:spinner-gap-bold" className="animate-spin text-[var(--md-sys-color-primary)]" width="24" /> <span className="text-sm font-bold tracking-wide">Running historical validation models...</span></div>;
   if (error || !data) return <div className="p-5 bg-[var(--md-sys-color-error-container)] border border-[var(--md-sys-color-error)] text-[var(--md-sys-color-on-error-container)] font-bold text-sm rounded-[24px] shadow-sm">Error loading validation data.</div>;
 
+  const fmtPct = (val: number | null | undefined) => {
+    if (val === null || val === undefined) return "-";
+    return (val > 0 ? "+" : "") + (val * 100).toFixed(2) + "%";
+  };
+
+  const fmtRp = (val: number | null | undefined) => {
+    if (val === null || val === undefined) return "-";
+    const sign = val < 0 ? "-" : "";
+    const n = Math.abs(val);
+    if (n >= 1e12) return sign + "Rp " + (n / 1e12).toFixed(2) + " T";
+    if (n >= 1e9) return sign + "Rp " + (n / 1e9).toFixed(2) + " B";
+    if (n >= 1e6) return sign + "Rp " + (n / 1e6).toFixed(2) + " M";
+    return sign + "Rp " + n.toLocaleString("id-ID");
+  };
 
   const isBullish = chartData.length > 0 && chartData[chartData.length - 1].median >= 100;
   // Ini untuk Chart (butuh value hex asli, bukan variable) 

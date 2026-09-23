@@ -7,18 +7,53 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart, ReferenceLine
 } from "recharts";
 
-import dynamic from "next/dynamic";
-import { fmtRp, fmtPct, signedColor, signalColor, getProfileTextColor } from "@/lib/format";
-
-const BrokerFlowTab = dynamic(() => import("@/components/analysis/BrokerFlowTab"), { ssr: false });
-const CausalityTab = dynamic(() => import("@/components/analysis/CausalityTab"), { ssr: false });
-const ValidationTab = dynamic(() => import("@/components/analysis/ValidationTab"), { ssr: false });
-const ScreenerTab = dynamic(() => import("@/components/analysis/ScreenerTab"), { ssr: false });
-const RawTablesTab = dynamic(() => import("@/components/analysis/RawTablesTab"), { ssr: false });
+import BrokerFlowTab from "@/components/analysis/BrokerFlowTab";
+import CausalityTab from "@/components/analysis/CausalityTab";
+import ValidationTab from "@/components/analysis/ValidationTab";
+import ScreenerTab from "@/components/analysis/ScreenerTab";
+import RawTablesTab from "@/components/analysis/RawTablesTab";
 import TickerSearch from "@/components/layout/TickerSearch";
 import { useAppStore } from "@/store/useAppStore";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+/* ==================== FORMATTERS ==================== */
+function fmtRp(n: number | null): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return "-";
+  const sign = n < 0 ? "-" : "";
+  const v = Math.abs(n);
+  if (v >= 1e12) return sign + "Rp " + (v / 1e12).toFixed(2) + " T";
+  if (v >= 1e9) return sign + "Rp " + (v / 1e9).toFixed(2) + " B";
+  if (v >= 1e6) return sign + "Rp " + (v / 1e6).toFixed(2) + " M";
+  return sign + "Rp " + v.toLocaleString("id-ID");
+}
+
+function fmtPct(n: number | null): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return "-";
+  return (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
+}
+
+function signedColor(n: number): string {
+  return n >= 0 ? "var(--color-positive)" : "var(--color-negative)";
+}
+
+function signalColor(score: number | null): string {
+  if (score === null || score === undefined) return "var(--md-sys-color-outline)";
+  if (score >= 2) return "var(--color-positive)";
+  if (score === 1) return "var(--color-positive)";
+  if (score === 0) return "var(--md-sys-color-outline)";
+  if (score === -1) return "var(--color-negative)";
+  return "var(--color-negative)";
+}
+
+export function getProfileTextColor(label: string) {
+  const l = label.toLowerCase();
+  if (l.includes("foreign smart")) return "var(--color-positive)";
+  if (l.includes("local inst")) return "#3b82f6";
+  if (l.includes("market maker")) return "#a855f7";
+  if (l.includes("speculative")) return "#f59e0b";
+  return "var(--md-sys-color-outline)";
+}
 
 const TABS = ["Overview", "Broker Flow", "Causality", "Validation", "Screener", "Raw Tables"];
 
