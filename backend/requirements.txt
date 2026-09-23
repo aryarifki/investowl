@@ -6,7 +6,6 @@ scipy
 seaborn
 statsmodels
 matplotlib
-plotly
 python-dotenv
 psycopg2-binary
 requests
