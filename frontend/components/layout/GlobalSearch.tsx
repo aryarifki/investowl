@@ -14,7 +14,7 @@ export default function GlobalSearch() {
 
   // Ambil daftar ticker secara global
   const { data } = useSWR("/api/bandar/universe/all", fetcher, { revalidateOnFocus: false });
-  const allTickers = data?.tickers || [];
+  const allTickers = useMemo(() => (data?.tickers as string[]) || [], [data?.tickers]);
 
   const results = useMemo(() => {
     if (!query) return [];

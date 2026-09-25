@@ -7,13 +7,47 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart, ReferenceLine
 } from "recharts";
 
-import BrokerFlowTab from "@/components/analysis/BrokerFlowTab";
-import CausalityTab from "@/components/analysis/CausalityTab";
-import ValidationTab from "@/components/analysis/ValidationTab";
-import ScreenerTab from "@/components/analysis/ScreenerTab";
-import RawTablesTab from "@/components/analysis/RawTablesTab";
+import dynamic from "next/dynamic";
 import TickerSearch from "@/components/layout/TickerSearch";
 import { useAppStore } from "@/store/useAppStore";
+
+function TabSkeleton({ title }: { title: string }) {
+  return (
+    <div className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[28px] p-6 animate-pulse space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="h-5 w-36 bg-[var(--md-sys-color-surface-container-highest)] rounded-md" />
+        <div className="h-4 w-20 bg-[var(--md-sys-color-surface-container-highest)] rounded-full" />
+      </div>
+      <div className="h-64 bg-[var(--md-sys-color-surface-container)] rounded-2xl" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="h-16 bg-[var(--md-sys-color-surface-container)] rounded-xl" />
+        <div className="h-16 bg-[var(--md-sys-color-surface-container)] rounded-xl" />
+        <div className="h-16 bg-[var(--md-sys-color-surface-container)] rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+const BrokerFlowTab = dynamic(() => import("@/components/analysis/BrokerFlowTab"), {
+  ssr: false,
+  loading: () => <TabSkeleton title="Broker Flow Analysis" />,
+});
+const CausalityTab = dynamic(() => import("@/components/analysis/CausalityTab"), {
+  ssr: false,
+  loading: () => <TabSkeleton title="Causality Engine" />,
+});
+const ValidationTab = dynamic(() => import("@/components/analysis/ValidationTab"), {
+  ssr: false,
+  loading: () => <TabSkeleton title="Historical Validation" />,
+});
+const ScreenerTab = dynamic(() => import("@/components/analysis/ScreenerTab"), {
+  ssr: false,
+  loading: () => <TabSkeleton title="Alpha Screener" />,
+});
+const RawTablesTab = dynamic(() => import("@/components/analysis/RawTablesTab"), {
+  ssr: false,
+  loading: () => <TabSkeleton title="Raw Records" />,
+});
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 

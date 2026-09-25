@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@iconify/react";
 import {
@@ -56,10 +56,26 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [flowMode, setFlowMode] = useState("Cumulative");
   const [distMode, setDistMode] = useState("Date range");
-  const [distDate, setDistDate] = useState(analysisDate);
-  const [distStart, setDistStart] = useState(analysisDate);
-  const [distEnd, setDistEnd] = useState(analysisDate);
+  const [customDistDate, setCustomDistDate] = useState<string | null>(null);
+  const [customDistStart, setCustomDistStart] = useState<string | null>(null);
+  const [customDistEnd, setCustomDistEnd] = useState<string | null>(null);
   const [profileFilter, setProfileFilter] = useState("all");
+
+  const defaultDistEnd = analysisDate;
+  const defaultDistStart = React.useMemo(() => {
+    if (!analysisDate) return "";
+    const dateObj = new Date(analysisDate);
+    if (isNaN(dateObj.getTime())) return analysisDate;
+    dateObj.setDate(dateObj.getDate() - windowDays);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, [analysisDate, windowDays]);
+
+  const distDate = customDistDate ?? analysisDate;
+  const distStart = customDistStart ?? defaultDistStart;
+  const distEnd = customDistEnd ?? defaultDistEnd;
 
   const qs = "?window_days=" + windowDays + 
              (analysisDate ? "&analysis_date=" + analysisDate : "") + 
@@ -76,35 +92,15 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
     { refreshInterval: 60000, revalidateOnFocus: false, keepPreviousData: true }
   );
 
-  useEffect(() => {
-    if (!data) return;
-    if (selectedCodes.length === 0 && data.default_codes) {
-      setSelectedCodes(data.default_codes.slice(0, 3));
-    }
-  }, [data?.default_codes]);
-
-  useEffect(() => {
-    if (analysisDate) {
-      setDistDate(analysisDate);
-      setDistEnd(analysisDate);
-      
-      const dateObj = new Date(analysisDate);
-      if (!isNaN(dateObj.getTime())) {
-         dateObj.setDate(dateObj.getDate() - windowDays);
-         const yyyy = dateObj.getFullYear();
-         const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-         const dd = String(dateObj.getDate()).padStart(2, '0');
-         setDistStart(`${yyyy}-${mm}-${dd}`);
-      }
-    }
-  }, [analysisDate, windowDays]);
+  const activeCodes: string[] = selectedCodes.length > 0 ? selectedCodes : (data?.default_codes?.slice(0, 3) || []);
 
   const toggleCode = (code: string) => {
-    if (selectedCodes.includes(code)) {
-      setSelectedCodes(selectedCodes.filter((c) => c !== code));
+    const current = selectedCodes.length > 0 ? selectedCodes : (data?.default_codes?.slice(0, 3) || []);
+    if (current.includes(code)) {
+      setSelectedCodes(current.filter((c: string) => c !== code));
     } else {
-      if (selectedCodes.length >= 10) return; 
-      setSelectedCodes([...selectedCodes, code]);
+      if (current.length >= 10) return; 
+      setSelectedCodes([...current, code]);
     }
   };
 
@@ -135,12 +131,12 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
             >
               <option value="">+ Add Broker</option>
               {(data?.all_codes || []).map((code: string) => (
-                <option key={code} value={code} disabled={selectedCodes.includes(code)}>{code}</option>
+                <option key={code} value={code} disabled={activeCodes.includes(code)}>{code}</option>
               ))}
             </select>
             
             <div className="flex flex-wrap gap-2">
-              {selectedCodes.map((code: string) => (
+              {activeCodes.map((code: string) => (
                 <div key={code} className="flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border border-[var(--md-sys-color-primary)] rounded-full text-sm font-extrabold tracking-wide shadow-sm">
                   {code}
                   <button onClick={() => toggleCode(code)} className="bg-[var(--md-sys-color-surface)]/20 hover:bg-[var(--color-negative)] hover:text-white transition-colors p-1 rounded-full"><Icon icon="ph:x-bold" width="14" /></button>
@@ -160,7 +156,7 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
       </div>
 
       {/* ====== BROKER FLOW COMPARISON CHART ====== */}
-      {selectedCodes.length > 0 && (
+      {activeCodes.length > 0 && (
         <div className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[28px] p-5 sm:p-6 shadow-sm transition-colors duration-300">
           <h3 className="text-sm sm:text-base font-extrabold text-[var(--md-sys-color-on-surface)] mb-5 tracking-tight">Broker Flow Comparison <span className="opacity-60 text-[var(--md-sys-color-on-surface-variant)] text-sm font-semibold ml-1">({flowMode})</span></h3>
           <div className="h-80 w-full">
@@ -171,7 +167,7 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
                 <YAxis tick={{ fontSize: 10, fill: "var(--md-sys-color-on-surface-variant)", fontWeight: 600 }} stroke="var(--md-sys-color-outline-variant)" axisLine={false} tickLine={false} label={{ value: 'Cumulative Net (Rp B)', angle: -90, position: 'insideLeft', fill: 'var(--md-sys-color-on-surface-variant)', fontSize: 10, fontWeight: 700 }} />
                 <Tooltip contentStyle={{ background: "var(--md-sys-color-surface-container-highest)", border: "1px solid var(--md-sys-color-outline-variant)", borderRadius: "16px", fontSize: "12px", color: "var(--md-sys-color-on-surface)", fontWeight: 700, boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelStyle={{ color: "var(--md-sys-color-on-surface-variant)", fontWeight: 800, marginBottom: "4px" }} formatter={(value: any, name: any) => ["Rp " + Number(value).toFixed(2) + " B", name]} />
                 <ReferenceLine y={0} stroke="var(--md-sys-color-outline)" strokeWidth={1.5} />
-                {selectedCodes.map((code: string, i: number) => (
+                {activeCodes.map((code: string, i: number) => (
                   <Line key={code} type="monotone" dataKey={code} stroke={COLORS[i % COLORS.length]} strokeWidth={3} dot={{ r: 3, strokeWidth: 1 }} activeDot={{ r: 6, stroke: "var(--md-sys-color-surface)", strokeWidth: 2 }} connectNulls />
                 ))}
               </LineChart>
@@ -286,12 +282,12 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
             <div className="flex-1">
                 <label className="block text-[10px] font-extrabold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-widest mb-2.5">Distribution date</label>
                 {distMode === "Single day" ? (
-                    <input type="date" className="w-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-4 py-2.5 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] shadow-sm" value={distDate} onChange={(e) => setDistDate(e.target.value)} />
+                    <input type="date" className="w-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-4 py-2.5 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] shadow-sm" value={distDate} onChange={(e) => setCustomDistDate(e.target.value)} />
                 ) : (
                     <div className="flex flex-col sm:flex-row items-center gap-2">
-                    <input type="date" className="w-full sm:w-1/2 bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-4 py-2.5 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] shadow-sm" value={distStart} onChange={(e) => setDistStart(e.target.value)} />
+                    <input type="date" className="w-full sm:w-1/2 bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-4 py-2.5 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] shadow-sm" value={distStart} onChange={(e) => setCustomDistStart(e.target.value)} />
                     <span className="text-[var(--md-sys-color-on-surface-variant)] text-xs font-bold uppercase">to</span>
-                    <input type="date" className="w-full sm:w-1/2 bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-4 py-2.5 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] shadow-sm" value={distEnd} onChange={(e) => setDistEnd(e.target.value)} />
+                    <input type="date" className="w-full sm:w-1/2 bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-4 py-2.5 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] shadow-sm" value={distEnd} onChange={(e) => setCustomDistEnd(e.target.value)} />
                     </div>
                 )}
             </div>

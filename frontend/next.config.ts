@@ -30,7 +30,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async rewrites() {
-    const backendUrl = process.env.INTERNAL_BACKEND_URL || "http://127.0.0.1:8000";
+    const backendUrl = process.env.INTERNAL_BACKEND_URL || "http://127.0.0.1:8001";
     return [
       {
         source: "/api/bandar/:path*",
@@ -51,6 +51,14 @@ const nextConfig: NextConfig = {
       {
         source: "/api/signal/:path*",
         destination: `${backendUrl}/api/signal/:path*`,
+      },
+      {
+        source: "/api/logs/:path*",
+        destination: `${backendUrl}/api/logs/:path*`,
+      },
+      {
+        source: "/api/health",
+        destination: `${backendUrl}/api/health`,
       },
       {
         source: "/api/users/:path*",

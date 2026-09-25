@@ -16,7 +16,7 @@ export default function TickerSearch() {
   const [searchTerm, setSearchTerm] = useState("");
   
   const { data: allUniverseData, isLoading: isLoadingUniverse } = useSWR("/api/bandar/universe/all", fetcher);
-  const allTickers = allUniverseData?.tickers || [];
+  const allTickers = useMemo(() => allUniverseData?.tickers || [], [allUniverseData?.tickers]);
 
   const filteredTickers = useMemo(() => {
     const term = searchTerm.trim().toUpperCase();

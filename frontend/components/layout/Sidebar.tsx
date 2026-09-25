@@ -23,8 +23,7 @@ export default function Sidebar() {
   const { mutate } = useSWRConfig();
   const { data: session } = useSession();
   const pathname = usePathname();
-  if (pathname === "/login" || pathname === "/pending") return null;
-  
+
   const { 
     sidebarOpen, setSidebarOpen, activeTicker,
     universe, setUniverse, analysisDate, setAnalysisDate,
@@ -39,29 +38,40 @@ export default function Sidebar() {
   const [pipelineRunning, setPipelineRunning] = useState<string | null>(null);
   const [isRefreshingMaster, setIsRefreshingMaster] = useState(false);
 
-  const isAdmin = session?.user && (session.user as any).role === "admin";
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
   useEffect(() => {
     try {
       const ls = localStorage.getItem("tradepulse_watchlist");
       if (ls) setLocalWatchlist(JSON.parse(ls));
-    } catch (e) {}
+    } catch {
+      // Ignore localStorage parse errors
+    }
   }, [setLocalWatchlist]);
 
   const { data: statusData, mutate: mutateStatus } = useSWR("/api/bandar/system-status", fetcher);
   const { data: datesData } = useSWR(activeTicker ? "/api/bandar/dates/" + activeTicker : null, fetcher);
-  const availableDates: string[] = datesData?.dates || [];
+  const availableDates: string[] = React.useMemo(() => datesData?.dates || [], [datesData?.dates]);
+  const latestAvailableDate = availableDates.length > 0 ? availableDates[availableDates.length - 1] : null;
+
+  const defaultBackfillEnd = latestAvailableDate || "";
+  const defaultBackfillStart = React.useMemo(() => {
+    if (!latestAvailableDate) return "";
+    const d = new Date(latestAvailableDate);
+    d.setDate(d.getDate() - 90);
+    return d.toISOString().split("T")[0];
+  }, [latestAvailableDate]);
+
+  const currentBackfillStart = backfillStart || defaultBackfillStart;
+  const currentBackfillEnd = backfillEnd || defaultBackfillEnd;
 
   useEffect(() => {
-    if (availableDates.length > 0 && (!analysisDate || !availableDates.includes(analysisDate))) {
-      const latest = availableDates[availableDates.length - 1];
-      setAnalysisDate(latest);
-      setBackfillEnd(latest);
-      const d = new Date(latest);
-      d.setDate(d.getDate() - 90);
-      setBackfillStart(d.toISOString().split("T")[0]);
+    if (latestAvailableDate && (!analysisDate || !availableDates.includes(analysisDate))) {
+      setAnalysisDate(latestAvailableDate);
     }
-  }, [availableDates, analysisDate, setAnalysisDate]);
+  }, [latestAvailableDate, analysisDate, availableDates, setAnalysisDate]);
+
+  if (pathname === "/login" || pathname === "/pending") return null;
 
   const handleCalendarChange = (selected: string) => {
     if (!selected || availableDates.length === 0) return;
@@ -90,8 +100,8 @@ export default function Sidebar() {
       } else {
         alert(`Gagal: ${json.error || "Gagal refresh master tickers"}`);
       }
-    } catch (e: any) {
-      alert(`Error koneksi: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`Error koneksi: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setIsRefreshingMaster(false);
     }
@@ -100,11 +110,11 @@ export default function Sidebar() {
   const runPipeline = async (type: "today" | "missing" | "backfill") => {
     setPipelineRunning(type);
     try {
-      const payload: any = { universe_mode: universe };
+      const payload: { universe_mode: string; tickers?: string[]; start_date?: string; end_date?: string } = { universe_mode: universe };
       if (universe === "watchlist" && localWatchlist.length > 0) {
           payload.tickers = localWatchlist;
       }
-      let res;
+      let res: Response;
       if (type === "today") {
         res = await fetch("/api/bandar/pipeline/run", {
           method: "POST",
@@ -120,8 +130,8 @@ export default function Sidebar() {
           body: JSON.stringify(payload),
         });
       } else {
-        payload.start_date = backfillStart;
-        payload.end_date = backfillEnd;
+        payload.start_date = currentBackfillStart;
+        payload.end_date = currentBackfillEnd;
         res = await fetch("/api/bandar/pipeline/backfill", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -135,8 +145,8 @@ export default function Sidebar() {
       } else {
         alert("Pipeline error: " + (json.detail || "Gagal"));
       }
-    } catch (e: any) {
-      alert("Error: " + e.message);
+    } catch (e: unknown) {
+      alert("Error: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setPipelineRunning(null);
     }
@@ -277,19 +287,19 @@ export default function Sidebar() {
                 <input
                   type="date"
                   className="w-full bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-3 py-1.5 text-xs font-medium text-[var(--md-sys-color-on-surface)] transition-colors"
-                  value={backfillStart}
+                  value={currentBackfillStart}
                   onChange={(e) => setBackfillStart(e.target.value)}
                 />
                 <input
                   type="date"
                   className="w-full bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-3 py-1.5 text-xs font-medium text-[var(--md-sys-color-on-surface)] transition-colors"
-                  value={backfillEnd}
+                  value={currentBackfillEnd}
                   onChange={(e) => setBackfillEnd(e.target.value)}
                 />
               </div>
               <button 
                 onClick={() => runPipeline("backfill")}
-                disabled={pipelineRunning !== null || !backfillStart || !backfillEnd}
+                disabled={pipelineRunning !== null || !currentBackfillStart || !currentBackfillEnd}
                 className="w-full bg-[var(--md-sys-color-primary)] hover:opacity-90 text-[var(--md-sys-color-on-primary)] rounded-full px-4 py-2.5 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
               >
                 {pipelineRunning === "backfill" ? <Icon icon="ph:spinner-gap" className="animate-spin" width="16"/> : <Icon icon="ph:database-bold" width="16"/>}

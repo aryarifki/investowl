@@ -4,6 +4,8 @@ import numpy as np
 
 # Inject path agar modul src terbaca
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+import pytest
+pytest.importorskip("hmmlearn")
 
 from services.foreign_analytics import compute_hmm_regime, compute_var_irf, compute_foreign_hhi
 

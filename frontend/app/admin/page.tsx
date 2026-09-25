@@ -1,33 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 import { Icon } from "@iconify/react";
+
+interface AdminUser {
+  id: number;
+  name?: string;
+  email: string;
+  role: string;
+  is_approved: boolean;
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
-  useEffect(() => {
-    if (session?.user && (session.user as any).role === "admin") {
-      fetchUsers();
-    }
-  }, [session]);
-
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/users/");
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      }
-    } catch (e) {
-      console.error("Gagal mengambil data pengguna", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: users = [], isLoading, mutate: refreshUsers } = useSWR<AdminUser[]>(
+    isAdmin ? "/api/users/" : null,
+    fetcher
+  );
 
   const toggleApproval = async (id: number, currentStatus: boolean) => {
     try {
@@ -37,7 +32,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ is_approved: !currentStatus }),
       });
       if (res.ok) {
-        fetchUsers(); // Segarkan data setelah berhasil
+        refreshUsers(); // Segarkan data setelah berhasil
       }
     } catch (e) {
       console.error("Gagal mengubah status", e);
@@ -45,7 +40,7 @@ export default function AdminDashboard() {
   };
 
   // Proteksi Halaman Khusus Admin
-  if (!session || (session.user as any).role !== "admin") {
+  if (!session || (session.user as { role?: string }).role !== "admin") {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] text-[var(--md-sys-color-error)]">
         <Icon icon="ph:shield-warning-duotone" width="64" className="mb-4" />
@@ -79,7 +74,7 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--md-sys-color-outline-variant)]">
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)]">
                     <Icon icon="eos-icons:loading" width="24" className="mx-auto" />

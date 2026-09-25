@@ -1,25 +1,27 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useAppStore } from '@/store/useAppStore';
 
-export default function BrokerHeatmap({ heatmapData }: { heatmapData: any }) {
+export interface HeatmapData {
+  x_dates: string[];
+  y_brokers: string[];
+  matrix_data: [number, number, number][];
+}
+
+export default function BrokerHeatmap({ heatmapData }: { heatmapData?: HeatmapData | null }) {
   // Mendengarkan perubahan tema dari Zustand agar chart auto-re-render
   const theme = useAppStore((state) => state.theme);
-  const [styles, setStyles] = useState<any>({});
+  const isDark = theme === "dark";
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const rootStyle = getComputedStyle(document.documentElement);
-    setStyles({
-      surfaceHigh: rootStyle.getPropertyValue('--md-sys-color-surface-container-high').trim() || (theme === 'dark' ? '#2B2930' : '#ECE6F0'),
-      onSurface: rootStyle.getPropertyValue('--md-sys-color-on-surface').trim() || (theme === 'dark' ? '#E6E0E9' : '#1D1B20'),
-      onSurfaceVariant: rootStyle.getPropertyValue('--md-sys-color-on-surface-variant').trim() || (theme === 'dark' ? '#CAC4D0' : '#49454F'),
-      outlineVariant: rootStyle.getPropertyValue('--md-sys-color-outline-variant').trim() || (theme === 'dark' ? '#49454F' : '#CAC4D0'),
-      positive: rootStyle.getPropertyValue('--color-positive').trim() || '#10b981',
-      negative: rootStyle.getPropertyValue('--color-negative').trim() || '#f43f5e',
-    });
-  }, [theme]);
+  const styles = React.useMemo(() => ({
+    surfaceHigh: isDark ? '#2B2930' : '#ECE6F0',
+    onSurface: isDark ? '#E6E0E9' : '#1D1B20',
+    onSurfaceVariant: isDark ? '#CAC4D0' : '#49454F',
+    outlineVariant: isDark ? '#49454F' : '#CAC4D0',
+    positive: '#10b981',
+    negative: '#f43f5e',
+  }), [isDark]);
 
   if (!heatmapData || !heatmapData.matrix_data || heatmapData.matrix_data.length === 0) {
     return <div className="flex h-full items-center justify-center text-[var(--md-sys-color-on-surface-variant)] text-xs font-bold">Data transaksi broker tidak memadai</div>;
@@ -36,12 +38,12 @@ export default function BrokerHeatmap({ heatmapData }: { heatmapData: any }) {
       padding: [8, 12],
       borderRadius: 12,
       extraCssText: 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);',
-      formatter: function (params: any) {
+      formatter: function (params: { value: [number, number, number] }) {
         const date = x_dates[params.value[0]];
         const broker = y_brokers[params.value[1]];
         const zScore = params.value[2].toFixed(2);
-        const action = zScore > 0 ? 'Accumulation' : zScore < 0 ? 'Distribution' : 'Neutral';
-        const color = zScore > 0 ? styles.positive : zScore < 0 ? styles.negative : styles.onSurfaceVariant;
+        const action = Number(zScore) > 0 ? 'Accumulation' : Number(zScore) < 0 ? 'Distribution' : 'Neutral';
+        const color = Number(zScore) > 0 ? styles.positive : Number(zScore) < 0 ? styles.negative : styles.onSurfaceVariant;
         return `<div style="font-weight: 800; margin-bottom: 2px;">${broker} <span style="font-weight: 500; opacity: 0.7;">on ${date}</span></div>Z-Score: <span style="color:${color}; font-weight:800;">${zScore}</span> <span style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px;">(${action})</span>`;
       }
     },

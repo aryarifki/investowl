@@ -61,8 +61,8 @@ export const useAppStore = create<AppState>()(
       version: 1, // Memaksa browser mereset data nyangkut di local storage
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => {
-        // Mengecualikan analysisDate agar selalu ditarik dari DB terbaru
-        const { sidebarOpen, analysisDate, ...rest } = state;
+        // Mengecualikan analysisDate dan sidebarOpen dari local storage persistence
+        const { sidebarOpen: _sidebarOpen, analysisDate: _analysisDate, ...rest } = state;
         return rest;
       },
     }

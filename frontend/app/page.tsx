@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { Icon } from "@iconify/react";
 import TickerCard from "@/components/home/TickerCard";
-import InvestOwlLoader from "@/components/ui/InvestOwlLoader";
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 const LS_KEY = "tradepulse_watchlist";
@@ -38,42 +37,45 @@ function WatchlistFetcher({ ticker, onRemove }: { ticker: string; onRemove?: (t:
     close: data.close,
     ret_5d: data.ret_5d,
     foreign_net_5d: data.foreign_5d,
-    spark: data.price_chart?.slice(-20).map((d: any) => d.close) || []
+    spark: data.price_chart?.slice(-20).map((d: { close: number }) => d.close) || []
   };
 
   return <TickerCard item={item} onRemove={onRemove} />;
 }
 
 export default function HomeMobile() {
-  const [booted, setBooted] = useState(false);
   const [myList, setMyList] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    const timer = setTimeout(() => setBooted(true), 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
+    let initialList = ["BBCA", "BMRI", "GOTO"];
     try {
       const saved = localStorage.getItem(LS_KEY);
       if (saved) {
-         const parsed = JSON.parse(saved);
-         setMyList(parsed.length > 0 ? parsed : ["BBCA", "ASII"]);
-      } else {
-         setMyList(["BBCA", "BMRI", "GOTO"]);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          initialList = parsed;
+        } else {
+          initialList = ["BBCA", "ASII"];
+        }
       }
-    } catch (e) {}
-    setLoaded(true);
+    } catch {
+      // ignore JSON parse error
+    }
+    const timer = setTimeout(() => {
+      setMyList(initialList);
+      setLoaded(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const { data: dateData } = useSWR("/api/bandar/dates/BBCA", fetcher, { revalidateOnFocus: false });
   const latestDate = dateData?.dates?.[dateData.dates.length - 1] || "SYNCING...";
 
   const { data: universeData } = useSWR("/api/bandar/universe/all", fetcher, { revalidateOnFocus: false });
-  const allTickers = universeData?.tickers || [];
+  const allTickers = useMemo(() => (universeData?.tickers as string[]) || [], [universeData?.tickers]);
 
   function saveList(list: string[]) {
     setMyList(list);
@@ -95,16 +97,6 @@ export default function HomeMobile() {
     const q = query.toUpperCase();
     return allTickers.filter((t: string) => t.includes(q)).slice(0, 8);
   }, [query, allTickers]);
-
-  if (!booted) {
-    return (
-      <InvestOwlLoader
-        title="INITIALIZING SYSTEM"
-        subtitle="Loading InvestOwl Engine..."
-        fullScreen={true}
-      />
-    );
-  }
 
   return (
     <div className="min-h-[100dvh] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)] transition-colors duration-300 animate-fade-in">
@@ -250,7 +242,7 @@ export default function HomeMobile() {
             <div className="py-12 flex flex-col items-center justify-center text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[28px] shadow-sm transition-colors">
                <Icon icon="ph:ghost-duotone" width="48" className="mb-3 opacity-60" />
                <p className="text-sm font-bold tracking-wide">Your watchlist is empty.</p>
-               <p className="text-xs font-medium mt-1 opacity-70">Click "Edit List" to add some assets.</p>
+               <p className="text-xs font-medium mt-1 opacity-70">Click &quot;Edit List&quot; to add some assets.</p>
             </div>
           )}
         </section>

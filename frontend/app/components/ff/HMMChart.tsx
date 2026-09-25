@@ -1,22 +1,24 @@
 "use client";
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useAppStore } from '@/store/useAppStore';
 
-export default function HMMChart({ timeSeries }: { timeSeries: any }) {
-  const theme = useAppStore((state) => state.theme);
-  const [styles, setStyles] = useState<any>({});
+export interface HMMTimeSeries {
+  dates: string[];
+  close_prices: number[];
+  hmm_states: number[];
+}
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const rootStyle = getComputedStyle(document.documentElement);
-    setStyles({
-      surfaceHigh: rootStyle.getPropertyValue('--md-sys-color-surface-container-highest').trim() || (theme === 'dark' ? '#36343B' : '#E6E0E9'),
-      onSurface: rootStyle.getPropertyValue('--md-sys-color-on-surface').trim() || (theme === 'dark' ? '#E6E0E9' : '#1D1B20'),
-      onSurfaceVariant: rootStyle.getPropertyValue('--md-sys-color-on-surface-variant').trim() || (theme === 'dark' ? '#CAC4D0' : '#49454F'),
-      outlineVariant: rootStyle.getPropertyValue('--md-sys-color-outline-variant').trim() || (theme === 'dark' ? '#49454F' : '#CAC4D0'),
-    });
-  }, [theme]);
+export default function HMMChart({ timeSeries }: { timeSeries?: HMMTimeSeries | null }) {
+  const theme = useAppStore((state) => state.theme);
+  const isDark = theme === "dark";
+
+  const styles = useMemo(() => ({
+    surfaceHigh: isDark ? '#36343B' : '#E6E0E9',
+    onSurface: isDark ? '#E6E0E9' : '#1D1B20',
+    onSurfaceVariant: isDark ? '#CAC4D0' : '#49454F',
+    outlineVariant: isDark ? '#49454F' : '#CAC4D0',
+  }), [isDark]);
 
   const { dates, close_prices, hmm_states } = timeSeries || {};
 

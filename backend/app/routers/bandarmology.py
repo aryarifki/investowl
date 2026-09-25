@@ -1,26 +1,40 @@
 import numpy as np
-"""Router bandarmology — membungkus fungsi paket idx_bandarmology."""
-from datetime import date
-import threading
-
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
+import math
+from datetime import date
+import threading
 
 from ..idx_bridge import analysis, storage, universe, pipeline
+from services.bandarmology_service import (
+    clean_data as _clean,
+    clean_detail as _clean_detail,
+    broker_distribution_data_range as _broker_distribution_data_range,
+    broker_distribution_data_range as _broker_distribution_data,
+    broker_summary_table as _broker_summary_table,
+    broker_compare_data as _broker_compare_data,
+    signal_overlay as _signal_overlay,
+    fmt_signal as _fmt_signal,
+    participant_label as _participant_label,
+    price_at_or_before as _price_at_or_before,
+    return_to_date as _return_to_date,
+    flow_row_at as _flow_row_at,
+    latest_activity_date as _latest_activity_date,
+    conviction_score as _conviction_score,
+    contradiction_alerts as _contradiction_alerts,
+    smart_daily_from_activity as _smart_daily_from_activity,
+    profile_flow_from_activity as _profile_flow_from_activity,
+    profile_broker_detail_table as _profile_broker_detail_table,
+    get_dynamic_universe,
+    compute_daily_summary,
+    summary_cache,
+    detail_cache,
+    brokerflow_cache,
+    screener_cache,
+)
 
 router = APIRouter(prefix="/api/bandar", tags=["bandarmology"])
-import math
-
-def _clean(obj):
-    """Ganti NaN/Inf menjadi None agar valid JSON."""
-    if isinstance(obj, dict):
-        return {k: _clean(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_clean(v) for v in obj]
-    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
-        return None
-    return obj
 
 
 # ══════════════════════════════════════════════════════════
@@ -361,74 +375,14 @@ def refresh_universe():
 # Daily Summary — dengan cache 5 menit
 # ══════════════════════════════════════════════════════════
 
-_SUMMARY_CACHE: dict = {}
-
 @router.get("/daily-summary")
 def daily_summary(universe_mode: str = "all", refresh: int = 0):
-    import time as _time
+    return compute_daily_summary(universe_mode=universe_mode, refresh=refresh)
 
-    cache_key = universe_mode
-    now = _time.time()
-    cached = _SUMMARY_CACHE.get(cache_key)
-    if cached is not None and not refresh and (now - cached["ts"]) < 300:
-        return cached["data"]
-
-    tickers = get_dynamic_universe(universe_mode)
-    price_df = storage.read_prices(tickers)
-    flow_df = storage.read_broker_flow(tickers)
-
-    items = []
-    if not flow_df.empty:
-        flow_df = flow_df.sort_values("date")
-        for t, fsub in flow_df.groupby("ticker"):
-            try:
-                last = fsub.iloc[-1]
-                psub = price_df[price_df["ticker"] == t] if not price_df.empty else fsub.iloc[0:0]
-                psub = psub[psub["date"] <= last["date"]].sort_values("date")
-
-                ret_5d = None
-                if len(psub) > 5:
-                    base = float(psub.iloc[-6]["close"])
-                    if base:
-                        ret_5d = float(psub.iloc[-1]["close"]) / base - 1
-
-                f5 = None
-                tail5 = fsub.tail(5)
-                if "foreign_net_broker" in tail5.columns:
-                    f5 = float(tail5["foreign_net_broker"].fillna(0).sum())
-
-                items.append({
-                    "ticker": t,
-                    "date": str(last["date"]),
-                    "signal": last.get("bandar_signal"),
-                    "signal_score": last.get("bandar_signal_score"),
-                    "close": float(psub.iloc[-1]["close"]) if len(psub) else None,
-                    "ret_5d": ret_5d,
-                    "foreign_net_5d": f5,
-                    "spark": [float(x) for x in psub.tail(30)["close"]],
-                })
-            except Exception:
-                continue
-
-    from collections import Counter
-    counts = Counter((i["signal"] or "NETRAL").upper() for i in items)
-    top = sorted(items, key=lambda x: (x["signal_score"] or 0), reverse=True)[:5]
-
-    result = _clean({
-        "as_of": max((i["date"] for i in items), default=None),
-        "signal_counts": dict(counts),
-        "items": items,
-        "top_conviction": top,
-    })
-
-    _SUMMARY_CACHE[cache_key] = {"ts": now, "data": result}
-    return result
 
 # ============================================================
 # Ticker Detail Endpoint
 # ============================================================
-
-_DETAIL_CACHE: dict = {}
 
 def _clean_detail(obj):
     if isinstance(obj, dict):
@@ -771,10 +725,9 @@ def ticker_detail(
         analysis_ts = pd.Timestamp(max(dates)) if dates else pd.Timestamp.now()
 
     cache_key = f"{ticker}|{analysis_ts.date()}|{window_days}|{horizon}|v2"
-    now = _time.time()
-    cached = _DETAIL_CACHE.get(cache_key)
-    if cached is not None and (now - cached["ts"]) < 300:
-        return cached["data"]
+    cached = detail_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     price_df = storage.read_prices([ticker]).copy()
     broker_df = storage.read_broker_flow([ticker]).copy()
@@ -926,7 +879,7 @@ def ticker_detail(
         "activity_date": str(activity_date.date()) if activity_date else None,
     })
 
-    _DETAIL_CACHE[cache_key] = {"ts": now, "data": result}
+    detail_cache.set(cache_key, result)
     return result
 
 # ============================================================
@@ -962,8 +915,6 @@ def universe_tickers(mode: str):
 # ============================================================
 # Broker Flow Tab Endpoint
 # ============================================================
-
-_BROKERFLOW_CACHE: dict = {}
 
 def _broker_compare_data(activity, broker_codes, mode):
     if activity.empty or not broker_codes:
@@ -1123,12 +1074,10 @@ def broker_flow_detail(
         dates = sorted(activity_df[activity_df["ticker"] == ticker]["date"].dt.date.unique().tolist())
         analysis_ts = pd.Timestamp(max(dates)) if dates else pd.Timestamp.now()
 
-    # Cache key harus memasukkan parameter dist_mode dan dist_end agar FastAPI me-refresh datanya
     cache_key = f"{ticker}|{analysis_ts.date()}|{window_days}|{broker_codes}|{flow_mode}|{dist_mode}|{dist_start}|{dist_end}"
-    now = _time.time()
-    cached = _BROKERFLOW_CACHE.get(cache_key)
-    if cached is not None and (now - cached["ts"]) < 300:
-        return cached["data"]
+    cached = brokerflow_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     # Data Window Induk (Untuk Grafik)
     window_start = analysis_ts - pd.Timedelta(days=window_days)
@@ -1232,7 +1181,7 @@ def broker_flow_detail(
         "detail_rows": detail_rows,
     })
 
-    _BROKERFLOW_CACHE[cache_key] = {"ts": now, "data": result}
+    brokerflow_cache.set(cache_key, result)
     return result
 
 @router.get("/causality/{ticker}")
@@ -1511,32 +1460,24 @@ def get_dynamic_universe(mode: str) -> list[str]:
         
     return ["ANTM", "BBCA", "BBRI", "BMRI", "GOTO", "TLKM"]
 
-_SCREENER_CACHE = {}
-
 @router.get("/screener-v2")
 def smart_screener(
     universe_mode: str = "lq45",
     analysis_date: str = None,
     window_days: int = 20,
-    tickers: str = None  # <--- Parameter baru untuk menerima string "BBNI,BBCA,AADI" dari frontend
+    tickers: str = None
 ):
-    import time as _time
     import pandas as pd
     from idx_bandarmology import analysis, storage
 
-    # --- PERBARUI CACHE KEY: Tambahkan {tickers} agar cache tidak tertukar ---
     cache_key = f"screener|{universe_mode}|{analysis_date}|{window_days}|{tickers}"
-    now = _time.time()
+    cached = screener_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
-    if cache_key in _SCREENER_CACHE and (now - _SCREENER_CACHE[cache_key]['ts'] < 300):
-        return _SCREENER_CACHE[cache_key]['data']
-
-    # --- LOGIKA PENYARINGAN CERDAS ---
     if tickers:
-        # Jika ada kiriman "BBNI,BBCA" dari frontend, pecah jadi list dan timpa variabel tickers
         tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()]
     else:
-        # Jika kosong (mode normal), gunakan bawaan database
         tickers = get_dynamic_universe(universe_mode)
 
     if not tickers:
@@ -1554,13 +1495,23 @@ def smart_screener(
         scan_10d = pd.DataFrame()
         
     results = []
+
+    # Batch read broker flows in 1 SQL query to eliminate N roundtrips
+    cutoff_flow = (analysis_ts - pd.Timedelta(days=window_days + 60)).strftime("%Y-%m-%d")
+    try:
+        all_flows = storage.read_broker_flow(tickers[:100], start_date=cutoff_flow)
+        flow_groups = {t: sub for t, sub in all_flows.groupby("ticker")} if not all_flows.empty else {}
+    except Exception:
+        flow_groups = {}
     
     for ticker in tickers[:100]:
         try:
-            try:
-                df_flow_full = storage.read_broker_flow([ticker])
-            except Exception:
-                continue
+            df_flow_full = flow_groups.get(ticker, pd.DataFrame())
+            if df_flow_full.empty:
+                try:
+                    df_flow_full = storage.read_broker_flow([ticker], start_date=cutoff_flow)
+                except Exception:
+                    continue
                 
             if df_flow_full.empty:
                 continue
@@ -1634,8 +1585,7 @@ def smart_screener(
             "analysis_date": str(analysis_ts.date())
         }
     }
-    _SCREENER_CACHE[cache_key] = {"ts": now, "data": output}
-    
+    screener_cache.set(cache_key, output)
     return output
 
 
