@@ -1,9 +1,4 @@
-import sys
-from pathlib import Path
 import numpy as np
-
-# Inject path agar modul src terbaca
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import pytest
 pytest.importorskip("hmmlearn")
 

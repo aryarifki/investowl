@@ -6,7 +6,7 @@ import math
 from datetime import date
 import threading
 
-from ..idx_bridge import analysis, storage, universe, pipeline
+from idx_bandarmology import analysis, storage, universe, pipeline
 from services.bandarmology_service import (
     clean_data as _clean,
     clean_detail as _clean_detail,

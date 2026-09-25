@@ -1,5 +1,5 @@
 import React from 'react';
-import ForeignFlowDeepDiveTab from '@/app/components/ff/ForeignFlowDeepDiveTab';
+import ForeignFlowDeepDiveTab from '@/components/foreign/ForeignFlowDeepDiveTab';
 import TickerSearch from '@/components/layout/TickerSearch';
 
 export default function ForeignPage() {

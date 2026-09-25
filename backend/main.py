@@ -19,10 +19,8 @@ from sqlalchemy.orm import Session
 from config import settings
 from database import get_db
 from models import BrokerFlow
-from routers import stocks, broker, auth, signal, system
-from app.routers import bandarmology
+from routers import stocks, broker, auth, signal, system, foreign_flow, bandarmology
 from idx_bandarmology.universe import refresh_master_tickers
-from routers import foreign_flow
 
 
 # Inisialisasi Redis Terpusat untuk Rate Limiting

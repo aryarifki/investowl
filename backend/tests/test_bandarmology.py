@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from app.routers.bandarmology import _broker_distribution_data_range
+from routers.bandarmology import _broker_distribution_data_range
 
 @pytest.fixture
 def complex_activity_df():
