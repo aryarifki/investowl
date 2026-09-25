@@ -81,6 +81,27 @@ def participant_label(value: Any) -> str:
     )
 
 
+def broker_subtype(row: Any) -> str:
+    """Classifies foreign brokers into Institutional, Speculative, or Mixed based on ticket size and frequency."""
+    if hasattr(row, "get"):
+        p_type = row.get("participant_type") or row.get("Type") or row.get("type")
+        net = abs(float(row.get("net_value") or row.get("Net") or row.get("net") or 0))
+        freq = max(float(row.get("frequency") or row.get("Freq") or row.get("freq") or 0), 1)
+    else:
+        p_type = getattr(row, "participant_type", getattr(row, "Type", getattr(row, "type", None)))
+        net = abs(float(getattr(row, "net_value", getattr(row, "Net", getattr(row, "net", 0))) or 0))
+        freq = max(float(getattr(row, "frequency", getattr(row, "Freq", getattr(row, "freq", 0))) or 0), 1)
+
+    if participant_label(p_type) != "FOREIGN":
+        return "-"
+    avg_value = net / freq
+    if avg_value >= 500_000_000 or (net >= 5_000_000_000 and freq <= 500):
+        return "Institutional"
+    if freq >= 2_000 or avg_value <= 100_000_000:
+        return "Speculative"
+    return "Mixed"
+
+
 ACC_SIGNALS = {"STRONG_ACCUMULATION", "ACCUMULATION", "NET_BUY", "AKUMULASI_KUAT", "AKUMULASI"}
 DIST_SIGNALS = {"STRONG_DISTRIBUTION", "DISTRIBUTION", "NET_SELL", "DISTRIBUSI_KUAT", "DISTRIBUSI"}
 SMART_PROFILES = {"smart_foreign", "local_institutional"}

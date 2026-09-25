@@ -14,6 +14,7 @@ from services.bandarmology_service import (
     broker_distribution_data_range as _broker_distribution_data,
     broker_summary_table as _broker_summary_table,
     broker_compare_data as _broker_compare_data,
+    broker_subtype as _broker_subtype,
     signal_overlay as _signal_overlay,
     fmt_signal as _fmt_signal,
     participant_label as _participant_label,
@@ -1144,6 +1145,7 @@ def broker_flow_detail(
             detail_rows.append({
                 "broker": str(row["broker_code"]),
                 "type": _participant_label(row["participant_type"]),
+                "subtype": _broker_subtype(row),
                 "buy": float(row["buy"]),
                 "sell": float(row["sell"]),
                 "net": float(row["net"]),

@@ -377,6 +377,7 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
                     <tr className="text-[var(--md-sys-color-on-surface-variant)] border-b border-[var(--md-sys-color-outline-variant)] text-[9px] uppercase tracking-widest font-extrabold">
                         <th className="py-3 px-4">Broker</th>
                         <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Sub-type</th>
                         <th className="py-3 px-4 text-right">Buy</th>
                         <th className="py-3 px-4 text-right">Sell</th>
                         <th className="py-3 px-4 text-right">Net</th>
@@ -388,10 +389,25 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
                         <tr key={i} className="hover:bg-[var(--md-sys-color-surface-container-highest)] transition-colors">
                         <td className="py-3 px-4 text-[var(--md-sys-color-on-surface)] font-extrabold font-mono">{row.broker}</td>
                         <td className="py-3 px-4 font-bold uppercase text-[var(--md-sys-color-on-surface-variant)]">{row.type}</td>
+                        <td className="py-3 px-4 font-bold text-xs">
+                          {row.subtype && row.subtype !== "-" ? (
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide ${
+                              row.subtype === "Institutional"
+                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                : row.subtype === "Speculative"
+                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                            }`}>
+                              {row.subtype}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--md-sys-color-on-surface-variant)] opacity-50">-</span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 text-right font-mono font-bold text-[var(--md-sys-color-on-surface)]">{row.buy ? fmtRp(row.buy) : "Rp 0"}</td>
                         <td className="py-3 px-4 text-right font-mono font-bold text-[var(--md-sys-color-on-surface)]">{row.sell ? fmtRp(row.sell) : "Rp 0"}</td>
                         <td className="py-3 px-4 text-right font-mono font-extrabold" style={{ color: signedColor(row.net) }}>{fmtRp(row.net)}</td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-[var(--md-sys-color-on-surface-variant)]">{row.freq ? row.freq.toFixed(6) : "0"}</td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-[var(--md-sys-color-on-surface-variant)]">{row.freq ? row.freq.toLocaleString("id-ID") : "0"}</td>
                         </tr>
                     ))}
                     </tbody>
