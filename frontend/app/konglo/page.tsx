@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import useSWR from "swr";
-import TickerSearch from "@/components/layout/TickerSearch";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -163,26 +162,22 @@ export default function KongloPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] pb-24">
-      <main className="max-w-4xl mx-auto px-4 pt-4 space-y-4">
-        <TickerSearch />
-        {/* Header Hero Banner MD3 */}
-        <div className="rounded-[24px] bg-gradient-to-br from-[var(--md-sys-color-primary-container)] to-[var(--md-sys-color-surface-container)] p-5 border border-[var(--md-sys-color-outline-variant)] shadow-sm">
-          <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center shrink-0 shadow-md">
-              <Icon icon="ph:buildings-bold" width="26" />
+    <main className="min-h-screen bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] p-4 md:p-6 transition-colors duration-300 pb-24">
+      <div className="max-w-7xl mx-auto space-y-5">
+        {/* HEADER PEMBUNGKUS KONGLOMERASI */}
+        <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-[var(--md-sys-color-primary)] to-emerald-500"></div>
+
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] flex items-center justify-center shrink-0 border border-[var(--md-sys-color-outline-variant)] shadow-2xs">
+              <Icon icon="ph:buildings-bold" width="22" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-[var(--md-sys-color-on-primary-container)]">
-                Peta Konglomerasi Pasar Modal
-              </h1>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 leading-relaxed">
-                Pantau rotasi dana Smart Money antar-grup konglomerat terbesar Indonesia. Analisis keterkaitan harga, akumulasi bandar terkoordinasi, dan sentimen lintas emiten satu atap.
-              </p>
-            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
+              Konglomerasi
+            </h1>
           </div>
 
-          {/* Search Box */}
+          {/* Search Box Filter Konglomerat */}
           <div className="mt-4 relative">
             <Icon
               icon="ph:magnifying-glass-duotone"
@@ -194,7 +189,7 @@ export default function KongloPage() {
               placeholder="Cari grup konglomerat atau kode emiten (misal: Salim, BREN, Astra)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] placeholder-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] text-xs text-[var(--md-sys-color-on-surface)] placeholder-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-sans"
             />
           </div>
         </div>
@@ -273,7 +268,7 @@ export default function KongloPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

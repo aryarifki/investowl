@@ -17,10 +17,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isAuthPage = pathname === "/login" || pathname === "/pending";
 
   const isHome = pathname === "/";
-  const isDetail = !isHome && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/signal") && !pathname.includes("/logs") && !pathname.includes("/admin");
+  const isDetail = !isHome && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
-  const isSignal = pathname.includes("/signal");
+  const isWhales = pathname.includes("/whales");
+  const isBacktest = pathname.includes("/backtest");
   const isLogs = pathname.includes("/logs");
 
   const detailPath = `/${activeTicker || "BBCA"}`;
@@ -91,9 +92,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <Icon icon={isKonglo ? "ph:buildings-fill" : "ph:buildings-duotone"} width="15" />
                 <span>Konglo</span>
               </Link>
-              <Link href="/signal" className={desktopNavLinkClass(isSignal)}>
-                <Icon icon={isSignal ? "ph:lightning-fill" : "ph:lightning-duotone"} width="15" />
-                <span>AI Signal</span>
+              <Link href="/whales" className={desktopNavLinkClass(isWhales)}>
+                <Icon icon={isWhales ? "ph:fish-simple-fill" : "ph:fish-simple-duotone"} width="15" />
+                <span>Whales</span>
+              </Link>
+              <Link href="/backtest" className={desktopNavLinkClass(isBacktest)}>
+                <Icon icon={isBacktest ? "ph:chart-polar-fill" : "ph:chart-polar-duotone"} width="15" />
+                <span>Backtest</span>
               </Link>
               <Link href="/logs" className={desktopNavLinkClass(isLogs)}>
                 <Icon icon={isLogs ? "ph:terminal-window-fill" : "ph:terminal-window-duotone"} width="15" />

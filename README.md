@@ -53,10 +53,13 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
   - **HMM Regime Detection**: Gaussian Hidden Markov Model 3-state untuk mendeteksi rezim pasar (Akumulasi Kuat, Netral, Distribusi Berat).
   - **VAR Impulse Response Function (IRF)**: Analisis kausalitas dinamis antara net buy asing dan pergerakan return saham hingga horizon $T+20$.
   - **Broker Network Graph & Heatmap**: Visualisasi topologi jaringan bilateral antar-broker dan matriks intensitas transaksi counterparty berbasis Apache ECharts.
-- **⚡ AI Multi-Layer Signal Dashboard**:
-  - Sistem penilaian kuantitatif multi-layer: *Technical*, *Smart Money*, *Sector*, dan *Fundamental*.
-  - Ambang batas dinamis adaptif terhadap rezim pasar (*Dynamic BEAR Market Threshold*).
-  - Filter toggle pills interaktif untuk menyaring emiten berdasarkan kombinasi layer tertentu.
+- **🐋 Broker Whales Tracker (`/whales`)**:
+  - Pelacak portofolio akumulasi dan distribusi bersih broker institusi, smart foreign (AK, BK, KZ, CS), bandar lokal (MG, SQ), dan domestik institusional.
+  - Pencarian broker instan dengan keyboard shortcut `/` dan submission langsung via tombol `Enter`.
+- **🧪 Strategy Backtest & Win-Rate Lab (`/backtest`)**:
+  - Transparansi dan evaluasi akurasi sinyal trading kuantitatif yang diaudit secara otomatis oleh `auditor.py`.
+  - Metrik performa kuantitatif: *Win Rate Ratio*, *Average Target Gain*, *Average Drawdown*, *Average Days Held*, dan *Profit Factor*.
+  - Tabel riwayat sinyal komprehensif (`WIN`, `LOSS`, `OPEN`) dengan filter status dan pencarian emiten interaktif.
 - **📊 Interactive Charts & Visualization**:
   - Grafik harga & volume interaktif responsif berbasis Recharts dan Apache ECharts.
   - Grafik profil flow bar dan distribusi akumulasi broker.
@@ -395,8 +398,10 @@ investowl/
 | `GET` | `/api/v1/auth/users` | `auth.py` | Daftar pengguna yang terdaftar (Khusus Admin). |
 | `POST`| `/api/v1/auth/approve/{id}`| `auth.py` | Menyetujui akses akun pengguna (Khusus Admin). |
 | `GET` | `/api/bandar/detail/{ticker}`| `bandarmology.py` | Analitik bandarmologi lengkap (Broker summary, Top-N). |
-| `GET` | `/api/foreign-flow/{ticker}` | `foreign_flow.py` | Analitik mendalam foreign flow (HMM, VAR IRF, HHI). |
-| `GET` | `/api/signal/` | `signal.py` | Daftar sinyal saham yang terdeteksi AI. |
+| `GET` | `/api/broker-flow/whales` | `broker.py` | Daftar broker aktif dan klasifikasi taksonomi (Smart Foreign, Bandar, dsb). |
+| `GET` | `/api/broker-flow/whales/{code}` | `broker.py` | Akumulasi dan distribusi bersih broker spesifik beserta estimasi average price. |
+| `GET` | `/api/signal/backtest/stats` | `signal.py` | Metrik agregasi akurasi dan win rate sinyal kuantitatif. |
+| `GET` | `/api/signal/backtest/history` | `signal.py` | Daftar riwayat sinyal terverifikasi dan diaudit (`WIN`/`LOSS`/`OPEN`). |
 | `GET` | `/api/system/logs/{type}` | `system.py` | Mengambil log sistem secara real-time. |
 
 ---

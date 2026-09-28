@@ -115,3 +115,42 @@ class UserRead(UserBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ══════════════════════════════════════════════════════════
+# Broker Whales Tracker Schemas
+# ══════════════════════════════════════════════════════════
+
+class WhaleStockItem(BaseModel):
+    ticker: str
+    net_value: float
+    buy_value: float
+    sell_value: float
+    net_lot: float
+    buy_avg_price: float | None = None
+    sell_avg_price: float | None = None
+
+
+class BrokerWhaleListItem(BaseModel):
+    broker_code: str
+    profile: str
+    profile_label: str
+    profile_desc: str
+    is_smart: bool = False
+
+
+class BrokerWhalesDetailResponse(BaseModel):
+    broker_code: str
+    profile: str
+    profile_label: str
+    profile_desc: str
+    is_smart: bool
+    period_days: int
+    start_date: date_type
+    end_date: date_type
+    total_buy_value: float
+    total_sell_value: float
+    total_net_value: float
+    top_accumulations: list[WhaleStockItem]
+    top_distributions: list[WhaleStockItem]
+

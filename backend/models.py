@@ -65,6 +65,29 @@ class BrokerFlow(Base):
     fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class BrokerActivity(Base):
+    """Mirror of `broker_activity` (granular broker-level transactions per stock).
+    PK komposit: (date, ticker, broker_code).
+    """
+    __tablename__ = "broker_activity"
+    __table_args__ = {"extend_existing": True}
+
+    date: Mapped[date_type] = mapped_column(Date, primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    broker_code: Mapped[str] = mapped_column(String(10), primary_key=True)
+
+    participant_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    buy_value: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+    sell_value: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+    net_value: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+    buy_lot: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+    sell_lot: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+    frequency: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    buy_avg_price: Mapped[float | None] = mapped_column(Numeric(18, 4), nullable=True)
+    sell_avg_price: Mapped[float | None] = mapped_column(Numeric(18, 4), nullable=True)
+    fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 # ══════════════════════════════════════════════════════════
 # Authentication Models
 # ══════════════════════════════════════════════════════════

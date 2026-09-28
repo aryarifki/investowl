@@ -45,6 +45,10 @@ _PROFILE_META: dict[str, tuple[str, str]] = {
 }
 _SMART_PROFILES = ("smart_foreign", "local_institutional")
 
+# Public aliases for dashboard and downstream analytics
+PROFILE_META = _PROFILE_META
+SMART_PROFILES = set(_SMART_PROFILES)
+
 
 def broker_profile_of(code: str | None) -> str:
     return _BROKER_PROFILES.get((code or "").upper(), "lainnya")

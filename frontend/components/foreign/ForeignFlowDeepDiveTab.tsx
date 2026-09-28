@@ -40,8 +40,8 @@ export default function ForeignFlowDeepDiveTab() {
     <div className="flex flex-col gap-5 sm:gap-6 pb-24 transition-colors duration-300 animate-fade-in">
       
       {/* HEADER EMITEN */}
-      <div className="mt-2 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[28px] p-5 sm:p-7 shadow-sm transition-colors duration-300 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[var(--md-sys-color-primary)] to-[var(--md-sys-color-tertiary)] opacity-80"></div>
+      <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-5 sm:p-6 shadow-xs transition-colors duration-300 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-[var(--md-sys-color-primary)] to-emerald-500"></div>
         <div className="text-[10px] sm:text-xs font-extrabold text-[var(--md-sys-color-primary)] uppercase tracking-widest mb-1.5">
           FOREIGN FLOW DEEP DIVE
         </div>
@@ -68,7 +68,7 @@ export default function ForeignFlowDeepDiveTab() {
 
       {/* LOADING STATE */}
       {isLoading && (
-        <div className="flex items-center justify-center py-24 text-[var(--md-sys-color-on-surface-variant)] animate-pulse bg-[var(--md-sys-color-surface-container-low)] rounded-[28px] border border-[var(--md-sys-color-outline-variant)] shadow-sm">
+        <div className="flex items-center justify-center py-24 text-[var(--md-sys-color-on-surface-variant)] animate-pulse bg-[var(--md-sys-color-surface-container)] rounded-2xl border border-[var(--md-sys-color-outline-variant)] shadow-sm">
           <Icon icon="ph:spinner-gap-bold" className="animate-spin mr-3 text-[var(--md-sys-color-primary)]" width="24" /> 
           <span className="font-extrabold tracking-widest uppercase text-sm">RUNNING ALGORITHMS...</span>
         </div>
@@ -128,7 +128,7 @@ export default function ForeignFlowDeepDiveTab() {
 
           {/* Baris Charts 1: HMM & VAR */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-            <div className="bg-[var(--md-sys-color-surface-container-low)] p-5 sm:p-6 rounded-[28px] border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
+            <div className="bg-[var(--md-sys-color-surface-container)] p-5 sm:p-6 rounded-2xl border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
               <div className="flex items-center gap-2.5 mb-5 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
                 <Icon icon="ph:chart-line-up-bold" className="text-[var(--md-sys-color-primary)]" width="22" />
                 <h3 className="text-sm sm:text-base font-extrabold tracking-tight text-[var(--md-sys-color-on-surface)] uppercase">HMM Market Regime</h3>
@@ -143,7 +143,7 @@ export default function ForeignFlowDeepDiveTab() {
               </div>
             </div>
             
-            <div className="bg-[var(--md-sys-color-surface-container-low)] p-5 sm:p-6 rounded-[28px] border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
+            <div className="bg-[var(--md-sys-color-surface-container)] p-5 sm:p-6 rounded-2xl border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
               <div className="flex items-center gap-2.5 mb-5 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
                 <Icon icon="ph:pulse-bold" className="text-[var(--md-sys-color-primary)]" width="22" />
                 <h3 className="text-sm sm:text-base font-extrabold tracking-tight text-[var(--md-sys-color-on-surface)] uppercase">Foreign Shock Causality (VAR)</h3>
@@ -162,7 +162,7 @@ export default function ForeignFlowDeepDiveTab() {
           {/* Baris Charts 2: Broker Heatmap & Network Graph */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mt-2">
             
-            <div className="bg-[var(--md-sys-color-surface-container-low)] p-5 sm:p-6 rounded-[28px] border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
+            <div className="bg-[var(--md-sys-color-surface-container)] p-5 sm:p-6 rounded-2xl border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
               <div className="flex items-center gap-2.5 mb-5 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
                 <Icon icon="ph:squares-four-bold" className="text-[var(--md-sys-color-primary)]" width="22" />
                 <h3 className="text-sm sm:text-base font-extrabold tracking-tight text-[var(--md-sys-color-on-surface)] uppercase">Top Broker Heatmap</h3>
@@ -177,7 +177,7 @@ export default function ForeignFlowDeepDiveTab() {
               </div>
             </div>
 
-            <div className="bg-[var(--md-sys-color-surface-container-low)] p-5 sm:p-6 rounded-[28px] border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
+            <div className="bg-[var(--md-sys-color-surface-container)] p-5 sm:p-6 rounded-2xl border border-[var(--md-sys-color-outline-variant)] shadow-sm flex flex-col transition-colors">
               <div className="flex items-center gap-2.5 mb-5 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
                 <Icon icon="ph:share-network-bold" className="text-[var(--md-sys-color-primary)]" width="22" />
                 <h3 className="text-sm sm:text-base font-extrabold tracking-tight text-[var(--md-sys-color-on-surface)] uppercase">Syndicate Network Graph</h3>

@@ -10,10 +10,11 @@ export default function BottomNav() {
   const { activeTicker } = useAppStore();
 
   const isHome = pathname === "/";
-  const isDashboard = !isHome && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/signal") && !pathname.includes("/logs") && !pathname.includes("/admin");
+  const isDashboard = !isHome && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
-  const isSignal = pathname.includes("/signal");
+  const isWhales = pathname.includes("/whales");
+  const isBacktest = pathname.includes("/backtest");
   const isLogs = pathname.includes("/logs");
 
   const targetDashboardPath = `/${activeTicker || "BBCA"}`;
@@ -63,11 +64,18 @@ export default function BottomNav() {
           <span className="text-[10px] mt-0.5 font-medium tracking-tight">Konglo</span>
         </Link>
 
-        <Link href="/signal" className={navItemClass(isSignal)}>
-          <div className={iconWrapper(isSignal)}>
-            <Icon icon={isSignal ? "ph:lightning-fill" : "ph:lightning-duotone"} width="20" />
+        <Link href="/whales" className={navItemClass(isWhales)}>
+          <div className={iconWrapper(isWhales)}>
+            <Icon icon={isWhales ? "ph:fish-simple-fill" : "ph:fish-simple-duotone"} width="20" />
           </div>
-          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Signal</span>
+          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Whales</span>
+        </Link>
+
+        <Link href="/backtest" className={navItemClass(isBacktest)}>
+          <div className={iconWrapper(isBacktest)}>
+            <Icon icon={isBacktest ? "ph:chart-polar-fill" : "ph:chart-polar-duotone"} width="20" />
+          </div>
+          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Backtest</span>
         </Link>
 
         <Link href="/logs" className={navItemClass(isLogs)}>
