@@ -5,29 +5,43 @@ import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { Icon } from "@iconify/react";
 import TickerCard from "@/components/home/TickerCard";
+import { useAppStore } from "@/store/useAppStore";
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
-const LS_KEY = "tradepulse_watchlist";
+const LS_PRIMARY = "investowl_watchlist";
+const LS_FALLBACK = "tradepulse_watchlist";
 
-function WatchlistFetcher({ ticker, onRemove }: { ticker: string; onRemove?: (t: string) => void }) {
-  const { data, isLoading, error } = useSWR(`/api/bandar/detail/${ticker}?window_days=20`, fetcher, { revalidateOnFocus: false });
-
-  if (isLoading) return (
-     <div className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[20px] p-4 h-[96px] flex flex-col justify-between animate-pulse shadow-sm">
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <div className="w-12 h-6 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
-                <div className="w-24 h-4 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
-            </div>
-            <div className="w-16 h-7 bg-[var(--md-sys-color-surface-container-highest)] rounded-full"></div>
-        </div>
-        <div className="flex items-center justify-between border-t border-[var(--md-sys-color-outline-variant)]/60 pt-3">
-            <div className="w-12 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded-sm"></div>
-            <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded-sm"></div>
-            <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded-sm"></div>
-        </div>
-     </div>
+function WatchlistCardFetcher({ 
+  ticker, 
+  onRemove 
+}: { 
+  ticker: string; 
+  onRemove?: (t: string) => void;
+}) {
+  const { data, isLoading, error } = useSWR(
+    `/api/bandar/detail/${ticker}?window_days=20`, 
+    fetcher, 
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
   );
+
+  if (isLoading) {
+    return (
+      <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-xl p-4 h-[104px] flex flex-col justify-between animate-pulse shadow-2xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-14 h-5 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
+            <div className="w-20 h-4 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
+          </div>
+          <div className="w-16 h-6 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)] pt-3">
+          <div className="w-12 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded"></div>
+          <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded mx-auto"></div>
+          <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded ml-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (error || data?.error) return null;
 
@@ -37,54 +51,61 @@ function WatchlistFetcher({ ticker, onRemove }: { ticker: string; onRemove?: (t:
     close: data.close,
     ret_5d: data.ret_5d,
     foreign_net_5d: data.foreign_5d,
-    spark: data.price_chart?.slice(-20).map((d: { close: number }) => d.close) || []
+    spark: data.price_chart?.slice(-20).map((d: { close: number }) => d.close) || [],
   };
 
   return <TickerCard item={item} onRemove={onRemove} />;
 }
 
-export default function HomeMobile() {
+export default function HomePage() {
+  const { setSidebarOpen, universe, localWatchlist, setLocalWatchlist } = useAppStore();
   const [myList, setMyList] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    let initialList = ["BBCA", "BMRI", "GOTO"];
+    let initialList = ["BBCA", "BMRI", "ASII", "TLKM"];
     try {
-      const saved = localStorage.getItem(LS_KEY);
+      const saved = localStorage.getItem(LS_PRIMARY) || localStorage.getItem(LS_FALLBACK);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           initialList = parsed;
-        } else {
-          initialList = ["BBCA", "ASII"];
         }
+      } else if (localWatchlist && localWatchlist.length > 0) {
+        initialList = localWatchlist;
       }
     } catch {
-      // ignore JSON parse error
+      // Ignore JSON parse error
     }
-    const timer = setTimeout(() => {
-      setMyList(initialList);
-      setLoaded(true);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    setMyList(initialList);
+    setLocalWatchlist(initialList);
+    setLoaded(true);
+  }, [setLocalWatchlist]);
 
   const { data: dateData } = useSWR("/api/bandar/dates/BBCA", fetcher, { revalidateOnFocus: false });
-  const latestDate = dateData?.dates?.[dateData.dates.length - 1] || "SYNCING...";
+  const latestDate = dateData?.dates?.[dateData.dates.length - 1] || "ONLINE";
 
   const { data: universeData } = useSWR("/api/bandar/universe/all", fetcher, { revalidateOnFocus: false });
   const allTickers = useMemo(() => (universeData?.tickers as string[]) || [], [universeData?.tickers]);
 
   function saveList(list: string[]) {
     setMyList(list);
-    localStorage.setItem(LS_KEY, JSON.stringify(list));
+    setLocalWatchlist(list);
+    try {
+      localStorage.setItem(LS_PRIMARY, JSON.stringify(list));
+      localStorage.setItem(LS_FALLBACK, JSON.stringify(list));
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   function addTicker(ticker: string) {
     const t = ticker.trim().toUpperCase();
-    if (t && !myList.includes(t)) saveList([...myList, t]);
+    if (t && !myList.includes(t)) {
+      saveList([...myList, t]);
+    }
     setQuery("");
   }
 
@@ -95,154 +116,223 @@ export default function HomeMobile() {
   const searchResults = useMemo(() => {
     if (!query) return [];
     const q = query.toUpperCase();
-    return allTickers.filter((t: string) => t.includes(q)).slice(0, 8);
+    return allTickers.filter((t: string) => t.includes(q)).slice(0, 10);
   }, [query, allTickers]);
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)] transition-colors duration-300 animate-fade-in">
-      <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-8 pb-8">
+    <div className="min-h-screen bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] transition-colors duration-200">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* HEADER SECTION */}
-        <header className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-4">
-          <div>
-              <h1 className="text-2xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight leading-none">HOME</h1>
-          </div>
-          <div className="text-right flex flex-col items-end">
-              <div className="text-[10px] font-extrabold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-widest mb-1.5">System Status</div>
-              <div className="flex items-center gap-2 text-[10px] font-bold font-mono border px-3 py-1.5 rounded-full shadow-sm" style={{ color: "var(--color-positive)", borderColor: "var(--color-positive)", backgroundColor: "var(--md-sys-color-surface-container)" }}>
-                  <span className="w-2 h-2 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: "var(--color-positive)" }}></span>
-                  ONLINE <span className="text-[var(--md-sys-color-on-surface-variant)] opacity-70 mx-0.5">•</span> {latestDate}
+        {/* INSTITUTIONAL MARKET PULSE HEADER */}
+        <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--md-sys-color-primary)] via-amber-500 to-emerald-500"></div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-positive)] bg-[var(--md-sys-color-surface-container-high)] px-2.5 py-1 rounded-md border border-[var(--md-sys-color-outline-variant)]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  IDX LIVE SYNC • {latestDate}
+                </span>
+                <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">•</span>
+                <span className="text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase">
+                  UNIVERSE: {universe.toUpperCase()}
+                </span>
               </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
+                Quantitative Market Terminal
+              </h1>
+              <p className="text-xs sm:text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] mt-1 max-w-2xl leading-relaxed">
+                Platform analitik aliran modal institusi (*Smart Money*) dan arus kas asing (*Foreign Flow*) dengan model matematis rekonsiliasi counterparty IDX.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-2 bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl text-xs font-bold text-[var(--md-sys-color-on-surface)] transition-all cursor-pointer shadow-2xs"
+                title="Buka Panel Parameter & Pipeline"
+              >
+                <Icon icon="ph:sliders-horizontal-duotone" width="16" className="text-[var(--md-sys-color-primary)]" />
+                <span>Parameter Model</span>
+              </button>
+            </div>
           </div>
-        </header>
 
-        {/* SYSTEM INFO CARD */}
-        <section className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[28px] p-6 sm:p-8 relative overflow-hidden shadow-sm transition-colors duration-300">
-           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[var(--md-sys-color-primary)] to-[var(--md-sys-color-tertiary)] opacity-80"></div>
-           
-           <div className="flex items-center gap-3 mb-4">
-               <div className="p-2 rounded-xl bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] shadow-sm">
-                 <Icon icon="ph:info-duotone" width="22" />
-               </div>
-               <h2 className="text-base sm:text-lg font-bold text-[var(--md-sys-color-on-surface)] tracking-tight">The Investowl System</h2>
-           </div>
-           
-           <p className="text-xs sm:text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] leading-relaxed mb-6 text-justify">
-             Platform terminal analitik saham komprehensif. Dirancang secara presisi untuk memonitor aliran dana asing (<i>Foreign Flow</i>), membedah jejak transaksi institusi (<i>Smart Money</i>), serta memvalidasi momentum dan kausalitas pergerakan harga di Bursa Efek Indonesia.
-           </p>
+          {/* Quick Engine Metrics Overview */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[var(--md-sys-color-outline-variant)]">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
+                Universe Assets
+              </span>
+              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--md-sys-color-on-surface)]">
+                {allTickers.length > 0 ? `${allTickers.length} Tickers` : "80+ Equities"}
+              </span>
+            </div>
 
-           <div className="flex flex-wrap gap-4 items-center justify-between border-t border-[var(--md-sys-color-outline-variant)] pt-5">
-             <div className="flex items-center gap-2 text-xs font-mono font-medium text-[var(--md-sys-color-on-surface-variant)]">
-               <Icon icon="ph:terminal-duotone" width="16" /> Author: <span className="text-[var(--md-sys-color-on-surface)] font-bold">arya rifky</span>
-             </div>
-             <a
-               href="https://www.instagram.com/rifqiaarya?igsi=bzJzbzZhZW1qanFr"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center gap-2 text-[10px] sm:text-xs font-bold font-mono hover:opacity-80 transition-opacity px-4 py-2 rounded-full border shadow-sm"
-               style={{ color: "var(--color-negative)", borderColor: "var(--color-negative)", backgroundColor: "var(--md-sys-color-surface)" }}
-             >
-               <Icon icon="ph:instagram-logo-duotone" width="16" /> @rifqiaarya
-             </a>
-           </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
+                Watchlist Active
+              </span>
+              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--md-sys-color-primary)]">
+                {myList.length} Saham Terpantau
+              </span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
+                Engine Regime
+              </span>
+              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--color-positive)]">
+                Gaussian HMM
+              </span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
+                Matching Algorithm
+              </span>
+              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--md-sys-color-on-surface)]">
+                Greedy Vol-Price
+              </span>
+            </div>
+          </div>
         </section>
 
-        {/* WATCHLIST SECTION */}
-        <section className="space-y-5">
-          <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-4">
-            <h3 className="text-base sm:text-lg font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight flex items-center gap-2.5">
-               <Icon icon="ph:binoculars-duotone" className="text-[var(--md-sys-color-primary)]" width="24" />
-               Active Watchlist
-               <span className="text-[10px] font-bold font-mono text-[var(--md-sys-color-on-surface)] ml-1 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] px-2.5 py-1 rounded-full shadow-sm">
-                 {myList.length} ASSETS
-               </span>
-            </h3>
-            <button
-              onClick={() => setEditing(!editing)}
-              className={`flex items-center gap-2 text-xs sm:text-sm font-bold px-4 py-2 rounded-full border transition-all active:scale-[0.98] shadow-sm ${
-                editing
-                  ? "bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border-[var(--md-sys-color-primary)]"
-                  : "bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)]"
-              }`}
-            >
-              <Icon icon={editing ? "ph:check-bold" : "ph:pencil-simple-duotone"} width="16" />
-              {editing ? "Done" : "Edit List"}
-            </button>
+        {/* WATCHLIST & SCANNER SECTION */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] flex items-center justify-center">
+                <Icon icon="ph:chart-polar-duotone" width="18" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
+                  Portfolio Watchlist
+                </h2>
+                <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                  Pantauan akumulasi bandar & net flow asing 5 hari bursa
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEditing(!editing)}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                  editing
+                    ? "bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)]"
+                    : "bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)]"
+                }`}
+              >
+                <Icon icon={editing ? "ph:check-bold" : "ph:pencil-simple-duotone"} width="14" />
+                <span>{editing ? "Selesai" : "Edit Pantauan"}</span>
+              </button>
+            </div>
           </div>
 
-          {/* EDITING PANEL */}
+          {/* EDIT & ADD TICKER BAR */}
           {editing && (
-            <div className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-primary)] rounded-[24px] p-5 sm:p-6 space-y-4 shadow-sm transition-colors animate-fade-in">
+            <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-primary)] rounded-xl p-4 space-y-3 shadow-sm transition-all animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-[var(--md-sys-color-on-surface)]">
+                  Tambah Emiten Baru ke Watchlist
+                </span>
+                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+                  Ketik kode ticker (e.g. BBRI, ASII, BREN)
+                </span>
+              </div>
+
               <div className="relative">
-                  <Icon icon="ph:magnifying-glass-bold" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-primary)]" width="18" />
-                  <input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search ticker (e.g. BBCA)..."
-                      className="w-full bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-full pl-11 pr-4 py-3 text-sm font-bold text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)] uppercase font-mono placeholder:normal-case placeholder:font-sans placeholder:font-medium transition-colors shadow-inner"
-                  />
+                <Icon 
+                  icon="ph:magnifying-glass-bold" 
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-primary)]" 
+                  width="16" 
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Cari kode saham..."
+                  className="w-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] focus:border-[var(--md-sys-color-primary)] rounded-lg pl-10 pr-4 py-2 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface)] outline-none uppercase placeholder:normal-case placeholder:font-normal transition-colors"
+                  autoFocus
+                />
               </div>
 
               {query && (
-                  <div className="flex flex-wrap gap-2.5 pt-2">
+                <div className="flex flex-wrap gap-1.5 pt-1">
                   {searchResults.map((t: string) => {
-                      const added = myList.includes(t);
-                      return (
+                    const added = myList.includes(t);
+                    return (
                       <button
-                          key={t}
-                          onClick={() => addTicker(t)}
-                          className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-full border font-extrabold font-mono transition-all active:scale-[0.98] shadow-sm ${
+                        key={t}
+                        onClick={() => addTicker(t)}
+                        disabled={added}
+                        className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border font-mono font-bold transition-all cursor-pointer ${
                           added
-                              ? "bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border-[var(--md-sys-color-primary)] opacity-60 cursor-default"
-                              : "bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)]"
-                          }`}
+                            ? "bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] opacity-50 cursor-not-allowed border-[var(--md-sys-color-outline-variant)]"
+                            : "bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)]"
+                        }`}
                       >
-                          <Icon icon={added ? "ph:check-bold" : "ph:plus-bold"} width="14" />
-                          {t}
+                        <Icon icon={added ? "ph:check-bold" : "ph:plus-bold"} width="12" />
+                        <span>{t}</span>
                       </button>
-                      );
+                    );
                   })}
-                  {searchResults.length === 0 && <span className="text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] italic px-2">No tickers found.</span>}
-                  </div>
+                  {searchResults.length === 0 && (
+                    <span className="text-xs text-[var(--md-sys-color-on-surface-variant)] italic px-2">
+                      Ticker tidak ditemukan di universe.
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           )}
 
-          {/* WATCHLIST GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-              {!loaded ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[20px] p-4 h-[96px] flex flex-col justify-between animate-pulse shadow-sm">
-                      <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <div className="w-12 h-6 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
-                              <div className="w-24 h-4 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
-                          </div>
-                          <div className="w-16 h-7 bg-[var(--md-sys-color-surface-container-highest)] rounded-full"></div>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-[var(--md-sys-color-outline-variant)]/60 pt-3">
-                          <div className="w-12 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded-sm"></div>
-                          <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded-sm"></div>
-                          <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded-sm"></div>
-                      </div>
+          {/* WATCHLIST CARDS GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {!loaded ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-xl p-4 h-[104px] flex flex-col justify-between animate-pulse shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-14 h-5 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
+                    <div className="w-16 h-6 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
                   </div>
-                ))
-              ) : (
-                myList.map((ticker) => (
-                   <WatchlistFetcher
-                      key={ticker}
-                      ticker={ticker}
-                      onRemove={editing ? removeTicker : undefined}
-                   />
-                ))
-              )}
+                  <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)] pt-3">
+                    <div className="w-10 h-3 bg-[var(--md-sys-color-surface-container-highest)] rounded"></div>
+                    <div className="w-10 h-3 bg-[var(--md-sys-color-surface-container-highest)] rounded mx-auto"></div>
+                    <div className="w-10 h-3 bg-[var(--md-sys-color-surface-container-highest)] rounded ml-auto"></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              myList.map((ticker) => (
+                <WatchlistCardFetcher
+                  key={ticker}
+                  ticker={ticker}
+                  onRemove={editing ? removeTicker : undefined}
+                />
+              ))
+            )}
           </div>
 
           {loaded && myList.length === 0 && (
-            <div className="py-12 flex flex-col items-center justify-center text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-[28px] shadow-sm transition-colors">
-               <Icon icon="ph:ghost-duotone" width="48" className="mb-3 opacity-60" />
-               <p className="text-sm font-bold tracking-wide">Your watchlist is empty.</p>
-               <p className="text-xs font-medium mt-1 opacity-70">Click &quot;Edit List&quot; to add some assets.</p>
+            <div className="py-16 flex flex-col items-center justify-center text-center bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl shadow-xs">
+              <Icon icon="ph:binocular-duotone" width="48" className="mb-3 text-[var(--md-sys-color-on-surface-variant)] opacity-60" />
+              <p className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
+                Watchlist pantauan Anda masih kosong.
+              </p>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
+                Klik &quot;Edit Pantauan&quot; di atas untuk menambahkan saham favorit Anda.
+              </p>
+              <button
+                onClick={() => setEditing(true)}
+                className="mt-4 px-4 py-2 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-lg text-xs font-bold transition-all hover:opacity-90 shadow-2xs cursor-pointer"
+              >
+                Tambah Emiten
+              </button>
             </div>
           )}
         </section>

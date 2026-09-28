@@ -1,33 +1,35 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @layer base {
-  /* =========================================
-     MD3 LIGHT THEME (Pastel Seed: #F9EDE1)
-     ========================================= */
+  /* =========================================================
+     INSTITUTIONAL QUANT LIGHT THEME (Crisp, High-Contrast)
+     ========================================================= */
   :root {
-    --md-sys-color-surface: #F9EDE1;
-    --md-sys-color-on-surface: #1E1A17;
-    --md-sys-color-on-surface-variant: #4E453F;
+    --md-sys-color-surface: #F8FAFC;
+    --md-sys-color-on-surface: #0F172A;
+    --md-sys-color-on-surface-variant: #475569;
     
     --md-sys-color-surface-container-lowest: #FFFFFF;
-    --md-sys-color-surface-container-low: #F3E7DB;
-    --md-sys-color-surface-container: #EDDFD3;
-    --md-sys-color-surface-container-high: #E7D8CB;
-    --md-sys-color-surface-container-highest: #E2D1C4;
+    --md-sys-color-surface-container-low: #F1F5F9;
+    --md-sys-color-surface-container: #FFFFFF;
+    --md-sys-color-surface-container-high: #E2E8F0;
+    --md-sys-color-surface-container-highest: #CBD5E1;
     
-    --md-sys-color-primary: #8C5000;
+    --md-sys-color-primary: #B45309; /* Deep Amber / Owl Gold */
     --md-sys-color-on-primary: #FFFFFF;
-    --md-sys-color-primary-container: #FFDCC2;
-    --md-sys-color-on-primary-container: #2D1600;
+    --md-sys-color-primary-container: #FEF3C7;
+    --md-sys-color-on-primary-container: #78350F;
     
-    --md-sys-color-outline: #84746A;
-    --md-sys-color-outline-variant: #D7C2B4;
+    --md-sys-color-outline: #94A3B8;
+    --md-sys-color-outline-variant: #E2E8F0;
 
-    /* Custom Accessible Colors for Financial Data (Light Mode = Darker) */
-    --color-positive: #166534; /* Dark Green */
-    --color-negative: #991B1B; /* Dark Red */
+    /* High-contrast WCAG AA Financial Signals (Light Mode) */
+    --color-positive: #047857; /* Deep Emerald 700 - Contrast > 4.8:1 on light */
+    --color-negative: #BE123C; /* Deep Rose 700 - Contrast > 4.7:1 on light */
 
-    /* Legacy Variables */
+    /* Legacy Compat Variables */
     --bg-primary: var(--md-sys-color-surface);
     --bg-surface: var(--md-sys-color-surface-container);
     --bg-surface-elevated: var(--md-sys-color-surface-container-high);
@@ -35,32 +37,32 @@
     --border-highlight: var(--md-sys-color-outline);
     --text-primary: var(--md-sys-color-on-surface);
     --text-secondary: var(--md-sys-color-on-surface-variant);
-    --text-muted: #64748b;
+    --text-muted: #64748B;
   }
 
-  /* =========================================
-     MD3 DARK THEME
-     ========================================= */
+  /* =========================================================
+     INSTITUTIONAL QUANT DARK THEME (Deep Navy / Terminal)
+     ========================================================= */
   [data-theme="dark"] {
-    --md-sys-color-surface: #141210;
-    --md-sys-color-on-surface: #EBE0D9;
-    --md-sys-color-on-surface-variant: #D7C2B4;
+    --md-sys-color-surface: #0B0F17;
+    --md-sys-color-on-surface: #F1F5F9;
+    --md-sys-color-on-surface-variant: #94A3B8;
     
-    --md-sys-color-surface-container-lowest: #0B0A08;
-    --md-sys-color-surface-container-low: #1C1916;
-    --md-sys-color-surface-container: #211D1A;
-    --md-sys-color-surface-container-high: #2B2622;
-    --md-sys-color-surface-container-highest: #36302A;
+    --md-sys-color-surface-container-lowest: #06090E;
+    --md-sys-color-surface-container-low: #101622;
+    --md-sys-color-surface-container: #141C2B;
+    --md-sys-color-surface-container-high: #1D283A;
+    --md-sys-color-surface-container-highest: #26354D;
     
-    --md-sys-color-primary: #FFB879;
-    --md-sys-color-on-primary: #4B2800;
-    --md-sys-color-primary-container: #6B3B00;
-    --md-sys-color-on-primary-container: #FFDCC2;
+    --md-sys-color-primary: #F59E0B; /* Vibrant Gold / Amber */
+    --md-sys-color-on-primary: #181102;
+    --md-sys-color-primary-container: #3B2A05;
+    --md-sys-color-on-primary-container: #FDE68A;
     
-    --md-sys-color-outline: #9F8D83;
-    --md-sys-color-outline-variant: #52443C;
+    --md-sys-color-outline: #475569;
+    --md-sys-color-outline-variant: #1E293B;
 
-    /* Custom Accessible Colors for Financial Data (Dark Mode = Brighter) */
+    /* Vibrant Accessible Financial Signals (Dark Mode) */
     --color-positive: #10B981; /* Bright Emerald */
     --color-negative: #F43F5E; /* Bright Rose */
   }
@@ -68,10 +70,10 @@
   body {
     background-color: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
@@ -97,9 +99,9 @@
 }
 
 .bg-terminal-grid {
-  background-size: 32px 32px;
+  background-size: 28px 28px;
   background-image: 
     linear-gradient(to right, var(--md-sys-color-outline-variant) 1px, transparent 1px),
     linear-gradient(to bottom, var(--md-sys-color-outline-variant) 1px, transparent 1px);
-  opacity: 0.15;
+  opacity: 0.25;
 }

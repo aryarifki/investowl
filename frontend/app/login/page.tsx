@@ -6,79 +6,116 @@ import Image from "next/image";
 
 export default function LoginPage() {
   const handleWhatsApp = () => {
-    window.open("https://wa.me/6287882725845?text=Halo%20Admin,%20saya%20ingin%20request%20akses%20untuk%20The%20Investowl.", "_blank");
+    window.open(
+      "https://wa.me/6287882725845?text=Halo%20Admin,%20saya%20ingin%20request%20akses%20untuk%20The%20Investowl.",
+      "_blank"
+    );
   };
 
   return (
-    <div className="min-h-[90vh] flex flex-col items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-md flex flex-col gap-6">
-        
-        {/* KARTU UTAMA LOGIN */}
-        <div className="bg-[var(--md-sys-color-surface-container)] rounded-[32px] p-8 sm:p-10 shadow-sm border border-[var(--md-sys-color-outline-variant)] relative overflow-hidden">
-          
-          {/* Dekorasi Latar Belakang */}
-          <div className="absolute -top-24 -right-24 w-56 h-56 bg-[var(--md-sys-color-primary-container)] rounded-full blur-3xl opacity-50"></div>
-          <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-[var(--md-sys-color-tertiary-container)] rounded-full blur-3xl opacity-50"></div>
+    <div className="min-h-[92vh] flex flex-col items-center justify-center p-4 relative">
+      {/* Background Subtle Ambience */}
+      <div className="absolute inset-0 bg-terminal-grid pointer-events-none opacity-40"></div>
 
-          <div className="relative z-10 flex flex-col items-center text-center mb-10 mt-2">
-            <div className="w-20 h-20 mb-6 relative drop-shadow-sm">
-              <Image 
-                src="/logo.png" 
-                alt="The Investowl Logo" 
-                fill 
-                sizes="80px"
-                className="object-contain" 
-                priority 
+      <div className="w-full max-w-lg flex flex-col gap-6 relative z-10 my-8">
+        {/* KARTU UTAMA LOGIN */}
+        <div className="bg-[var(--md-sys-color-surface-container)] rounded-2xl p-7 sm:p-9 shadow-md border border-[var(--md-sys-color-outline-variant)] relative overflow-hidden backdrop-blur-xs">
+          {/* Subtle Top Accent Line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-[var(--md-sys-color-primary)] to-emerald-500"></div>
+
+          {/* Header Brand */}
+          <div className="flex flex-col items-center text-center mb-8 mt-2">
+            <div className="w-16 h-16 mb-4 relative drop-shadow-sm">
+              <Image
+                src="/logo.png"
+                alt="The Investowl Logo"
+                fill
+                sizes="64px"
+                className="object-contain"
+                priority
               />
             </div>
-            
-            <h1 className="text-3xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight mb-3">
-              The Investowl
+
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] text-[10px] font-mono font-bold tracking-wider uppercase mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Quantitative Engine v2.0
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
+              Investowl Terminal
             </h1>
-            <p className="text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] leading-relaxed px-2">
-              Akses terbatas hanya untuk pengguna terdaftar.
+            <p className="text-xs sm:text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] mt-1.5 max-w-sm">
+              Sistem analitik bandarmologi dan arus modal institusi Bursa Efek Indonesia.
             </p>
           </div>
 
-          <div className="relative z-10 space-y-4">
+          {/* Action Buttons */}
+          <div className="space-y-3.5">
             <button
               onClick={() => signIn("google", { callbackUrl: "/" })}
-              className="w-full flex items-center justify-center gap-3 bg-[var(--md-sys-color-surface-container-highest)] hover:bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] rounded-full px-6 py-4 text-sm font-bold transition-all active:scale-[0.98] shadow-sm"
+              className="w-full flex items-center justify-center gap-3 bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] rounded-xl px-5 py-3.5 text-sm font-bold transition-all active:scale-[0.99] shadow-xs cursor-pointer"
             >
-              <Icon icon="logos:google-icon" width="22" />
-              Lanjutkan dengan Google
+              <Icon icon="logos:google-icon" width="20" />
+              <span>Masuk dengan Google</span>
             </button>
 
-            <div className="flex items-center py-2">
+            <div className="flex items-center py-1">
               <div className="flex-grow border-t border-[var(--md-sys-color-outline-variant)]"></div>
-              <span className="flex-shrink-0 mx-4 text-xs font-bold tracking-[0.2em] text-[var(--md-sys-color-outline)] uppercase">
+              <span className="flex-shrink-0 mx-3 text-[10px] font-mono font-bold tracking-[0.2em] text-[var(--md-sys-color-on-surface-variant)] uppercase">
                 Atau
               </span>
               <div className="flex-grow border-t border-[var(--md-sys-color-outline-variant)]"></div>
             </div>
 
-            {/* Perbaikan Kontras Tombol WhatsApp (MD3 Expressive) */}
             <button
               onClick={handleWhatsApp}
-              className="w-full flex items-center justify-center gap-3 bg-[#128C7E] hover:bg-[#075E54] text-white dark:bg-[#25D366] dark:hover:bg-[#128C7E] dark:text-[#075E54] rounded-full px-6 py-4 text-sm font-bold transition-all active:scale-[0.98] shadow-sm"
+              className="w-full flex items-center justify-center gap-2.5 bg-[#0F766E] hover:bg-[#115E59] text-white rounded-xl px-5 py-3.5 text-sm font-bold transition-all active:scale-[0.99] shadow-xs cursor-pointer"
             >
-              <Icon icon="ph:whatsapp-logo-fill" width="24" />
-              Request Akses via WhatsApp
+              <Icon icon="ph:whatsapp-logo-fill" width="20" />
+              <span>Request Akses Akun via WhatsApp</span>
             </button>
           </div>
-        </div>
 
-        {/* KOTAK DISCLAIMER (MD3 EXPRESSIVE STYLING) */}
-        <div className="bg-[var(--md-sys-color-surface-container-high)] rounded-[28px] p-6 sm:p-7 border border-[var(--md-sys-color-outline-variant)] shadow-sm">
-          <div className="flex items-center gap-2.5 mb-3 text-[var(--md-sys-color-error)]">
-            <Icon icon="ph:warning-circle-fill" width="22" />
-            <span className="text-sm font-bold uppercase tracking-widest">Disclaimer</span>
+          {/* PERBAIKAN TATA LETAK DISCLAIMER */}
+          <div className="mt-8 pt-6 border-t border-[var(--md-sys-color-outline-variant)]">
+            <div className="bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2 text-amber-500 font-semibold text-xs uppercase tracking-wider">
+                <Icon icon="ph:shield-warning-duotone" width="16" />
+                <span>Disclaimer Edukasi & Riset</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-[var(--md-sys-color-on-surface-variant)] text-justify">
+                Platform ini dibangun untuk tujuan edukasi serta riset kuantitatif data science. Bukan merupakan saran atau rekomendasi investasi finansial. Klasifikasi perilaku partisipan (&quot;Smart Money&quot;, &quot;Retail&quot;, dsb.) adalah estimasi heuristik matematika berbasis pola data transaksi historis, bukan identitas kepemilikan resmi. Segala keputusan transaksi pasar modal sepenuhnya berada di bawah tanggung jawab pengguna.
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] leading-relaxed text-center">
-            This project is built for educational purposes and data science research. It is not financial or investment advice. The behavioral buckets (&quot;Smart Money&quot;, &quot;Retail&quot;, etc.) are heuristic classifications based on historical broker patterns, not official identities. Any corporate-affiliation notes discovered using this tool are observational hypotheses and do not imply insider trading or wrongdoing.
-          </p>
         </div>
 
+        {/* FOOTER: COPYRIGHT & KONTAK AUTHOR */}
+        <footer className="text-center space-y-2 py-2">
+          <div className="flex items-center justify-center gap-4 text-xs font-medium text-[var(--md-sys-color-on-surface-variant)]">
+            <a
+              href="mailto:adryanrifky716@gmail.com"
+              className="flex items-center gap-1.5 hover:text-[var(--md-sys-color-primary)] transition-colors"
+            >
+              <Icon icon="ph:envelope-simple-duotone" width="16" />
+              <span>adryanrifky716@gmail.com</span>
+            </a>
+            <span className="opacity-30">•</span>
+            <a
+              href="https://www.instagram.com/rifqiaarya?stkn=dzl1d2RpczIyd2ts"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 hover:text-pink-500 transition-colors"
+            >
+              <Icon icon="ph:instagram-logo-duotone" width="16" />
+              <span>@rifqiaarya</span>
+            </a>
+          </div>
+
+          <div className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] opacity-80">
+            copyright &copy; 2026 Adryan Rifky. All rights reserved.
+          </div>
+        </footer>
       </div>
     </div>
   );
