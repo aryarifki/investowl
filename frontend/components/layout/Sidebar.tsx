@@ -266,7 +266,7 @@ export default function Sidebar() {
                   value={windowDays} 
                   onChange={(e) => setWindowDays(Number(e.target.value))}
                 >
-                  {WINDOWS.map((w) => <option key={w} value={w}>{w} days</option>)}
+                  {WINDOWS.map((w) => <option key={w} value={w}>{w} Hari</option>)}
                 </select>
               </div>
 

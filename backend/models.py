@@ -105,3 +105,21 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), default="user")
     is_approved: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ══════════════════════════════════════════════════════════
+# Shareholder & Ownership Models
+# ══════════════════════════════════════════════════════════
+
+class CompanyShareholder(Base):
+    """Mirror of `company_shareholders` (substantial shareholders & ownership).
+    PK komposit: (ticker, name).
+    """
+    __tablename__ = "company_shareholders"
+    __table_args__ = {"extend_existing": True}
+
+    ticker: Mapped[str] = mapped_column(String(20), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), primary_key=True)
+    pct: Mapped[float] = mapped_column(Numeric, nullable=False, default=0.0)
+    is_controlling: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
