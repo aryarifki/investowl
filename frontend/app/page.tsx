@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
+import { useSession } from "next-auth/react";
 import { Icon } from "@iconify/react";
 import TickerCard from "@/components/home/TickerCard";
 import { useAppStore } from "@/store/useAppStore";
@@ -26,7 +27,7 @@ function WatchlistCardFetcher({
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-xl p-4 h-[104px] flex flex-col justify-between animate-pulse shadow-2xs">
+      <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-2xl p-4 h-[104px] flex flex-col justify-between animate-pulse shadow-2xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-14 h-5 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
@@ -34,7 +35,7 @@ function WatchlistCardFetcher({
           </div>
           <div className="w-16 h-6 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
         </div>
-        <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)] pt-3">
+        <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)]/50 pt-3">
           <div className="w-12 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded"></div>
           <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded mx-auto"></div>
           <div className="w-14 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] rounded ml-auto"></div>
@@ -58,7 +59,8 @@ function WatchlistCardFetcher({
 }
 
 export default function HomePage() {
-  const { setSidebarOpen, universe, localWatchlist, setLocalWatchlist } = useAppStore();
+  const { data: session } = useSession();
+  const { localWatchlist, setLocalWatchlist } = useAppStore();
   const [myList, setMyList] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -79,13 +81,61 @@ export default function HomePage() {
     } catch {
       // Ignore JSON parse error
     }
-    setMyList(initialList);
-    setLocalWatchlist(initialList);
-    setLoaded(true);
-  }, [setLocalWatchlist]);
+
+    // Jika user login via Google, sinkronkan data watchlist dari server
+    if (session?.user?.email) {
+      fetch(`/api/users/${encodeURIComponent(session.user.email)}/watchlist`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data?.watchlist) && data.watchlist.length > 0) {
+            setMyList(data.watchlist);
+            setLocalWatchlist(data.watchlist);
+            try {
+              localStorage.setItem(LS_PRIMARY, JSON.stringify(data.watchlist));
+              localStorage.setItem(LS_FALLBACK, JSON.stringify(data.watchlist));
+            } catch {}
+          } else {
+            // Jika di server belum ada watchlist tersimpan, simpan initial list ke server
+            fetch(`/api/users/${encodeURIComponent(session.user!.email!)}/watchlist`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ watchlist: initialList }),
+            }).catch(() => {});
+            setMyList(initialList);
+            setLocalWatchlist(initialList);
+          }
+          setLoaded(true);
+        })
+        .catch(() => {
+          setMyList(initialList);
+          setLocalWatchlist(initialList);
+          setLoaded(true);
+        });
+    } else {
+      setMyList(initialList);
+      setLocalWatchlist(initialList);
+      setLoaded(true);
+    }
+  }, [setLocalWatchlist, session?.user?.email]);
 
   const { data: dateData } = useSWR("/api/bandar/dates/BBCA", fetcher, { revalidateOnFocus: false });
   const latestDate = dateData?.dates?.[dateData.dates.length - 1] || "ONLINE";
+
+  const formattedDate = useMemo(() => {
+    if (!latestDate || latestDate === "ONLINE") return "Data Terkini";
+    try {
+      const parts = latestDate.split("-");
+      if (parts.length === 3) {
+        const [y, m, d] = parts;
+        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+        const monthName = months[parseInt(m, 10) - 1] || m;
+        return `${parseInt(d, 10)} ${monthName} ${y}`;
+      }
+      return latestDate;
+    } catch {
+      return latestDate;
+    }
+  }, [latestDate]);
 
   const { data: universeData } = useSWR("/api/bandar/universe/all", fetcher, { revalidateOnFocus: false });
   const allTickers = useMemo(() => (universeData?.tickers as string[]) || [], [universeData?.tickers]);
@@ -98,6 +148,14 @@ export default function HomePage() {
       localStorage.setItem(LS_FALLBACK, JSON.stringify(list));
     } catch {
       // Ignore storage errors
+    }
+    // Jika user sedang login dengan Google, simpan perubahan ke database server
+    if (session?.user?.email) {
+      fetch(`/api/users/${encodeURIComponent(session.user.email)}/watchlist`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ watchlist: list }),
+      }).catch((e) => console.error("Gagal sinkronisasi watchlist:", e));
     }
   }
 
@@ -123,86 +181,28 @@ export default function HomePage() {
     <div className="min-h-screen bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] transition-colors duration-200">
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* INSTITUTIONAL MARKET PULSE HEADER */}
-        <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--md-sys-color-primary)] via-amber-500 to-emerald-500"></div>
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-positive)] bg-[var(--md-sys-color-surface-container-high)] px-2.5 py-1 rounded-md border border-[var(--md-sys-color-outline-variant)]">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  IDX LIVE SYNC • {latestDate}
-                </span>
-                <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">•</span>
-                <span className="text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase">
-                  UNIVERSE: {universe.toUpperCase()}
-                </span>
+        {/* MARKET HEADER */}
+        <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-3xl p-6 sm:p-7 transition-all">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)]/50 text-xs font-medium">
+                <Icon icon="ph:calendar-blank-duotone" width="14" className="text-[var(--md-sys-color-primary)]" />
+                <span>Data Terkini: <strong className="font-semibold text-[var(--md-sys-color-on-surface)]">{formattedDate}</strong></span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
                 Quantitative Market Terminal
               </h1>
-              <p className="text-xs sm:text-sm font-medium text-[var(--md-sys-color-on-surface-variant)] mt-1 max-w-2xl leading-relaxed">
-                Platform analitik aliran modal institusi (*Smart Money*) dan arus kas asing (*Foreign Flow*) dengan model matematis rekonsiliasi counterparty IDX.
+              <p className="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] max-w-2xl leading-relaxed">
+                Platform analitik aliran modal institusi (*Smart Money*) dan arus kas asing (*Foreign Flow*) pasar modal Indonesia.
               </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2 bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl text-xs font-bold text-[var(--md-sys-color-on-surface)] transition-all cursor-pointer shadow-2xs"
-                title="Buka Panel Parameter & Pipeline"
-              >
-                <Icon icon="ph:sliders-horizontal-duotone" width="16" className="text-[var(--md-sys-color-primary)]" />
-                <span>Parameter Model</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Engine Metrics Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[var(--md-sys-color-outline-variant)]">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
-                Universe Assets
-              </span>
-              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--md-sys-color-on-surface)]">
-                {allTickers.length > 0 ? `${allTickers.length} Tickers` : "80+ Equities"}
-              </span>
-            </div>
-
-            <div className="flex flex-col">
-              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
-                Watchlist Active
-              </span>
-              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--md-sys-color-primary)]">
-                {myList.length} Saham Terpantau
-              </span>
-            </div>
-
-            <div className="flex flex-col">
-              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
-                Engine Regime
-              </span>
-              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--color-positive)]">
-                Gaussian HMM
-              </span>
-            </div>
-
-            <div className="flex flex-col">
-              <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
-                Matching Algorithm
-              </span>
-              <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--md-sys-color-on-surface)]">
-                Greedy Vol-Price
-              </span>
             </div>
           </div>
         </section>
 
         {/* WATCHLIST & SCANNER SECTION */}
         <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)]/50 pb-3">
+            <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] flex items-center justify-center">
                 <Icon icon="ph:chart-polar-duotone" width="18" />
               </div>
@@ -219,10 +219,10 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setEditing(!editing)}
-                className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-full border transition-all cursor-pointer ${
                   editing
-                    ? "bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)]"
-                    : "bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)]"
+                    ? "bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] shadow-sm"
+                    : "bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]"
                 }`}
               >
                 <Icon icon={editing ? "ph:check-bold" : "ph:pencil-simple-duotone"} width="14" />
@@ -233,33 +233,33 @@ export default function HomePage() {
 
           {/* EDIT & ADD TICKER BAR */}
           {editing && (
-            <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-primary)] rounded-xl p-4 space-y-3 shadow-sm transition-all animate-fade-in">
+            <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-[var(--md-sys-color-on-surface)]">
+                <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
                   Tambah Emiten Baru ke Watchlist
                 </span>
-                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
-                  Ketik kode ticker (e.g. BBRI, ASII, BREN)
+                <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                  Ketik kode ticker (contoh: BBRI, ASII, BREN)
                 </span>
               </div>
 
               <div className="relative">
                 <Icon 
-                  icon="ph:magnifying-glass-bold" 
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-primary)]" 
-                  width="16" 
+                  icon="ph:magnifying-glass-duotone" 
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-on-surface-variant)]" 
+                  width="18" 
                 />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cari kode saham..."
-                  className="w-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] focus:border-[var(--md-sys-color-primary)] rounded-lg pl-10 pr-4 py-2 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface)] outline-none uppercase placeholder:normal-case placeholder:font-normal transition-colors"
+                  className="w-full bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)]/60 focus:border-[var(--md-sys-color-primary)] rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface)] outline-none uppercase placeholder:normal-case placeholder:font-normal transition-colors"
                   autoFocus
                 />
               </div>
 
               {query && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   {searchResults.map((t: string) => {
                     const added = myList.includes(t);
                     return (
@@ -267,10 +267,10 @@ export default function HomePage() {
                         key={t}
                         onClick={() => addTicker(t)}
                         disabled={added}
-                        className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border font-mono font-bold transition-all cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-mono font-medium transition-all cursor-pointer ${
                           added
-                            ? "bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] opacity-50 cursor-not-allowed border-[var(--md-sys-color-outline-variant)]"
-                            : "bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)]"
+                            ? "bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] opacity-50 cursor-not-allowed border-[var(--md-sys-color-outline-variant)]/40"
+                            : "bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)]/60 hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)]"
                         }`}
                       >
                         <Icon icon={added ? "ph:check-bold" : "ph:plus-bold"} width="12" />
@@ -294,13 +294,13 @@ export default function HomePage() {
               Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-xl p-4 h-[104px] flex flex-col justify-between animate-pulse shadow-2xs"
+                  className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-2xl p-4 h-[104px] flex flex-col justify-between animate-pulse shadow-2xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-14 h-5 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
                     <div className="w-16 h-6 bg-[var(--md-sys-color-surface-container-highest)] rounded-md"></div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)] pt-3">
+                  <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)]/50 pt-3">
                     <div className="w-10 h-3 bg-[var(--md-sys-color-surface-container-highest)] rounded"></div>
                     <div className="w-10 h-3 bg-[var(--md-sys-color-surface-container-highest)] rounded mx-auto"></div>
                     <div className="w-10 h-3 bg-[var(--md-sys-color-surface-container-highest)] rounded ml-auto"></div>
@@ -319,8 +319,8 @@ export default function HomePage() {
           </div>
 
           {loaded && myList.length === 0 && (
-            <div className="py-16 flex flex-col items-center justify-center text-center bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl shadow-xs">
-              <Icon icon="ph:binocular-duotone" width="48" className="mb-3 text-[var(--md-sys-color-on-surface-variant)] opacity-60" />
+            <div className="py-16 flex flex-col items-center justify-center text-center bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-3xl shadow-xs">
+              <Icon icon="ph:binocular-duotone" width="48" className="mb-3 text-[var(--md-sys-color-primary)] opacity-80" />
               <p className="text-sm font-bold text-[var(--md-sys-color-on-surface)]">
                 Watchlist pantauan Anda masih kosong.
               </p>
@@ -329,7 +329,7 @@ export default function HomePage() {
               </p>
               <button
                 onClick={() => setEditing(true)}
-                className="mt-4 px-4 py-2 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-lg text-xs font-bold transition-all hover:opacity-90 shadow-2xs cursor-pointer"
+                className="mt-4 px-5 py-2 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-full text-xs font-semibold transition-all hover:opacity-90 shadow-sm cursor-pointer"
               >
                 Tambah Emiten
               </button>

@@ -7,6 +7,7 @@ import {
   Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart, ReferenceLine
 } from "recharts";
 import dynamic from "next/dynamic";
+import { useSession } from "next-auth/react";
 import { Icon } from "@iconify/react";
 import TickerSearch from "@/components/layout/TickerSearch";
 import { useAppStore } from "@/store/useAppStore";
@@ -64,6 +65,7 @@ const TABS = [
 export default function TickerPage() {
   const params = useParams();
   const tickerFromUrl = String(params.ticker || "").toUpperCase();
+  const { data: session } = useSession();
   
   const { 
     activeTicker, setActiveTicker, 
@@ -80,15 +82,57 @@ export default function TickerPage() {
   }, [tickerFromUrl, activeTicker, setActiveTicker]);
 
   useEffect(() => {
-    if (universe === "watchlist" || activeTab === "Screener") {
-      try {
-        const ls = localStorage.getItem("investowl_watchlist") || localStorage.getItem("tradepulse_watchlist");
-        if (ls) {
-          setLocalWatchlist(JSON.parse(ls));
+    try {
+      const ls = localStorage.getItem("investowl_watchlist") || localStorage.getItem("tradepulse_watchlist");
+      if (ls) {
+        const parsed = JSON.parse(ls);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setLocalWatchlist(parsed);
         }
-      } catch (e) {}
+      }
+    } catch (e) {}
+
+    // Jika user login dengan Google, tarik watchlist terbaru dari akun mereka
+    if (session?.user?.email) {
+      fetch(`/api/users/${encodeURIComponent(session.user.email)}/watchlist`)
+        .then((res) => res.json())
+        .then((d) => {
+          if (Array.isArray(d?.watchlist) && d.watchlist.length > 0) {
+            setLocalWatchlist(d.watchlist);
+            try {
+              localStorage.setItem("investowl_watchlist", JSON.stringify(d.watchlist));
+              localStorage.setItem("tradepulse_watchlist", JSON.stringify(d.watchlist));
+            } catch {}
+          }
+        })
+        .catch(() => {});
     }
-  }, [universe, activeTab, setLocalWatchlist]);
+  }, [setLocalWatchlist, session?.user?.email]);
+
+  const isBookmarked = localWatchlist.includes(activeTicker);
+
+  const toggleBookmark = () => {
+    let nextList: string[];
+    if (isBookmarked) {
+      nextList = localWatchlist.filter((t) => t !== activeTicker);
+    } else {
+      nextList = [...localWatchlist, activeTicker];
+    }
+    setLocalWatchlist(nextList);
+    try {
+      localStorage.setItem("investowl_watchlist", JSON.stringify(nextList));
+      localStorage.setItem("tradepulse_watchlist", JSON.stringify(nextList));
+    } catch {}
+
+    // Sinkronkan ke server jika user login
+    if (session?.user?.email) {
+      fetch(`/api/users/${encodeURIComponent(session.user.email)}/watchlist`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ watchlist: nextList }),
+      }).catch((e) => console.error("Gagal sinkronisasi bookmark ke server:", e));
+    }
+  };
 
   const qs = "?window_days=" + windowDays + (analysisDate ? "&analysis_date=" + analysisDate : "");
   const { data, error, isLoading } = useSWR(
@@ -110,20 +154,36 @@ export default function TickerPage() {
       <TickerSearch />
 
       {/* IDENTITAS EMITEN (HEADER CARD) */}
-      <div className="mt-2 mb-6 bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-[var(--md-sys-color-primary)] to-emerald-500"></div>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+      <div className="mt-2 mb-6 bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-3xl p-5 sm:p-6 shadow-xs relative overflow-hidden transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
           <div>
             <div className="inline-flex items-center gap-2 text-[10px] font-mono font-bold text-[var(--md-sys-color-primary)] uppercase tracking-wider mb-1">
               <span>BANDARMOLOGY & SMART MONEY DEEP-DIVE</span>
               <span className="opacity-40">•</span>
               <span className="text-[var(--color-positive)] font-bold">LOOKBACK: {windowDays} HARI</span>
             </div>
-            <div className="flex items-baseline gap-3">
-              <h1 className="text-3xl sm:text-4xl font-mono font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
-                {activeTicker}
-              </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-3xl sm:text-4xl font-mono font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
+                  {activeTicker}
+                </h1>
+                <button
+                  onClick={toggleBookmark}
+                  className={`p-1.5 sm:p-2 rounded-full border transition-all cursor-pointer shadow-2xs active:scale-95 flex items-center justify-center ${
+                    isBookmarked
+                      ? "bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)]"
+                      : "bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)]/60 hover:text-[var(--md-sys-color-primary)] hover:border-[var(--md-sys-color-primary)]"
+                  }`}
+                  title={isBookmarked ? `Hapus ${activeTicker} dari Watchlist` : `Simpan ${activeTicker} ke Watchlist`}
+                  aria-label={isBookmarked ? `Hapus ${activeTicker} dari Watchlist` : `Simpan ${activeTicker} ke Watchlist`}
+                >
+                  <Icon 
+                    icon={isBookmarked ? "ph:star-fill" : "ph:star-bold"} 
+                    width="20" 
+                    className={isBookmarked ? "text-amber-500" : ""}
+                  />
+                </button>
+              </div>
               <span className="text-xs sm:text-sm font-semibold text-[var(--md-sys-color-on-surface-variant)]">
                 {data?.company?.name || "Bursa Efek Indonesia"}
               </span>
@@ -131,10 +191,10 @@ export default function TickerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-mono font-bold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] rounded-lg px-3 py-1.5 shadow-2xs">
+            <span className="text-xs font-mono font-bold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-xl px-3 py-1.5 shadow-2xs">
               Periode: {data?.window_start || "..."} <span className="opacity-50 mx-1">s/d</span> {data?.analysis_date || "..."}
             </span>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border border-[var(--md-sys-color-outline-variant)]">
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border border-[var(--md-sys-color-outline-variant)]/60">
               {data?.company?.group || "Equities IDX"}
             </span>
           </div>

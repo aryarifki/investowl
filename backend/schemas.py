@@ -112,9 +112,13 @@ class UserRead(UserBase):
     id: int
     role: str
     is_approved: bool
+    watchlist: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserWatchlistUpdate(BaseModel):
+    watchlist: list[str]
 
 
 # ══════════════════════════════════════════════════════════

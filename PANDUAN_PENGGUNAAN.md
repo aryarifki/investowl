@@ -19,18 +19,15 @@ Selamat datang di **Panduan Penggunaan Aplikasi Re-Tracker (The Investowl)**. Do
 
 ## 1. Akses & Otentikasi Pengguna
 
-Platform Re-Tracker menggunakan sistem otentikasi **Single Sign-On (SSO) Google** terintegrasi dengan gerbang persetujuan admin (*Admin Approval Gate*):
+Platform Re-Tracker mengusung prinsip **Akses Terbuka (Guest Mode)** ramah pengguna dengan opsi integrasi **Single Sign-On (SSO) Google**:
 
-1. **Masuk ke Aplikasi**:
-   - Buka browser dan arahkan ke alamat web: `http://localhost:3000` (atau domain produksi Anda).
-   - Anda akan melihat halaman login bertema burung hantu (*The Investowl*).
-   - Klik tombol **"Masuk dengan Google"**.
-2. **Status Akun Pending**:
-   - Jika akun Anda baru pertama kali didaftarkan, sistem akan secara otomatis mengarahkan Anda ke halaman **`/pending`**.
-   - Halaman ini menandakan akun Anda sedang menunggu konfirmasi persetujuan dari Administrator.
-3. **Pemberian Izin Akses**:
-   - Administrator sistem akan memverifikasi email Anda melalui halaman `/admin`.
-   - Begitu disetujui (*Status: Active*), Anda akan langsung mendapatkan akses penuh ke seluruh modul analitik tanpa perlu registrasi ulang.
+1. **Akses Langsung (Guest Mode)**:
+   - Anda dapat langsung membuka alamat web `http://localhost:3001` (atau domain produksi) dan langsung mengeksplorasi seluruh fitur dan analitik pasar (Beranda, Detail Emiten, Konglo, Foreign Flow, Whales, Backtest, Signal) tanpa hambatan login.
+2. **Login Opsional dengan Google**:
+   - Untuk menyimpan daftar pantau saham (*watchlist*) ke cloud database agar tidak hilang saat berganti perangkat atau browser, klik tombol **"Masuk"** di pojok kanan atas navbar.
+   - Pilih akun Google Anda. Seluruh pengguna terdaftar otomatis disetujui (*Instant Access*) dan data watchlist Anda akan tersinkronisasi otomatis dengan server.
+3. **Pemberian Izin Khusus Administrator**:
+   - Panel khusus `/admin` diproteksi untuk pengelolaan sistem lanjutan oleh administrator.
 
 ---
 
@@ -53,9 +50,10 @@ Halaman utama dirancang untuk memberikan tinjauan pasar secara instan (*bird's-e
 
 ## 3. Analisis Detail Saham (Deep-Dive Ticker) (`/[ticker]`)
 
-Saat Anda memilih suatu emiten (misal: membuka `http://localhost:3000/BBCA`), aplikasi menyajikan antarmuka analitik tingkat lanjut yang dibagi ke dalam 6 tab modular yang di-load secara dinamis (*code-split* menggunakan `next/dynamic`):
+Saat Anda memilih suatu emiten (misal: membuka `http://localhost:3001/BBCA`), aplikasi menyajikan antarmuka analitik tingkat lanjut yang dibagi ke dalam 6 tab modular yang di-load secara dinamis (*code-split* menggunakan `next/dynamic`):
 
-### A. Header Identitas Emiten
+### A. Header Identitas Emiten & Bookmark Bintang
+- **Tombol Bookmark Bintang (★)**: Terletak tepat di samping kode saham. Klik ikon bintang untuk menambahkan emiten ke watchlist atau menghapusnya secara instan.
 - Menampilkan nama emiten, tanggal analisis aktif, dan rentang *window lookback* (misal: 20 hari perdagangan bursa).
 - Indikator ringkasan sinyal bandar (*Bandar Signal Score*, *Dominance*, *Buyer/Seller Concentration Ratio*).
 
@@ -135,6 +133,11 @@ Fitur khusus untuk memantau aliran dana dan rotasi kapital antar-konglomerasi ek
 - **Tab Pemilih Grup**: Klik grup konglomerasi di bilah atas untuk menampilkan emiten-emiten yang berada di bawah naungan grup tersebut.
 - **Ticker Mini-Card**: Setiap kartu menyajikan harga terkini, perubahan persentase harian, sinyal akumulasi Smart Money, dan total net flow 20 hari perdagangan.
 - **Deteksi Rotasi Modal**: Jika emiten perbankan Himbara mulai mengalami distribusi bersamaan dengan aliran akumulasi masif pada emiten komoditas (misal: Grup Barito atau BUMN SDA), ini mengindikasikan adanya rotasi modal sektoral antar-grup konglomerat.
+
+### C. Peta Jejaring Kepemilikan Saham (Ownership Network Graph)
+- **Hierarki Horizontal Tree**: Visualisasi silsilah kepemilikan dirancang dari kiri ke kanan (Konglomerasi $\rightarrow$ Entitas Induk/Holding $\rightarrow$ Emiten Terbuka BEI) untuk kemudahan keterbacaan struktur kepemilikan.
+- **Pencarian Cerdas & Autocomplete**: Gunakan kolom pencarian di atas canvas untuk mengetikkan nama emiten (misal: `BBCA`), perusahaan holding (misal: `PT Dwimuria Investama Andalan`), atau grup konglomerat. Klik hasil dari dropdown untuk langsung memperbesar dan memfokuskan layar ke node target.
+- **Navigasi Canvas**: Gunakan tombol Zoom In (+), Zoom Out (-), Reset, atau drag mouse/layar sentuh untuk menggeser canvas graf secara fleksibel. Klik node manapun untuk melihat kartu ringkasan detail entitas.
 
 ---
 

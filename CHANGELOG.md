@@ -4,6 +4,48 @@ Seluruh perubahan penting pada proyek **Re-Tracker (The Investowl)** didokumenta
 
 ---
 
+## [1.3.0] - 2026-09-29
+
+### 🎨 Material Design 3 Expressive Pastel, Guest Mode, Cloud Watchlist Sync, Peta Jejaring Interaktif & PWA
+
+Pembaruan komprehensif pada antarmuka pengguna (UI/UX) dan sistem autentikasi, mengembalikan identitas visual pastel original yang bersih dan profesional tanpa AI-slop, memberikan akses publik terbuka (*Guest Mode*), sinkronisasi watchlist cloud via Google OAuth, navigasi jejaring graf konglomerasi horizontal tree dengan fitur pencarian autocomplete, serta kemampuan instalasi aplikasi instan sebagai Progressive Web App (PWA).
+
+#### Ditambahkan (Added)
+- **Guest Mode & Akses Publik Bebas Hambatan (`frontend/middleware.ts`)**:
+  - Seluruh rute analitik (Beranda, Detail Emiten, Konglo, Foreign Flow, Whales, Backtest, Signal) kini dapat diakses secara instan oleh publik tanpa diwajibkan melakukan autentikasi login terlebih dahulu. Proteksi akses hanya diberlakukan untuk rute khusus administrator (`/admin`).
+- **Autentikasi Google OAuth Fleksibel & Sinkronisasi Watchlist Cloud**:
+  - Tombol login Google OAuth ditempatkan secara ergonomis di kanan atas header (`frontend/components/layout/LogoutButton.tsx`), memungkinkan pengguna masuk kapan saja untuk menyimpan data pribadi.
+  - Setiap pengguna yang masuk melalui Google otomatis berstatus terverifikasi (`is_approved = True`).
+  - Kolom `watchlist` (JSONB) ditambahkan pada model database PostgreSQL `users` (`backend/models.py`, `backend/schemas.py`).
+  - Penambahan endpoint RESTful `GET /api/users/{email}/watchlist` dan `PUT /api/users/{email}/watchlist` (`backend/routers/auth.py`) untuk pertukaran data daftar pantau saham secara aman.
+  - Beranda (`frontend/app/page.tsx`) secara otomatis mensinkronkan daftar pantau saham pengguna dengan cloud database saat pengguna login.
+- **Tombol Bookmark Bintang di Header Emiten (`frontend/app/[ticker]/page.tsx`)**:
+  - Tombol bintang interaktif di samping kode saham (misal: `BBCA ★`) untuk menambahkan atau menghapus emiten dari daftar pantau secara instan.
+  - Terkoneksi otomatis dengan state global watchlist, `localStorage`, dan sinkronisasi server bila pengguna dalam keadaan login.
+- **Peta Jejaring Kepemilikan Interaktif & Autocomplete Search (`frontend/components/konglo/OwnershipNetworkGraph.tsx`)**:
+  - Visualisasi jejaring kepemilikan saham dirancang ulang sepenuhnya menggunakan tata letak hierarki horizontal tree yang mudah dibaca (Konglomerasi $\rightarrow$ Entitas Induk/Holding $\rightarrow$ Emiten Publik BEI).
+  - Kolom pencarian cerdas dengan dropdown autocomplete untuk mencari emiten, perusahaan holding, atau grup konglomerasi, lengkap dengan fokus visual dan auto-centering canvas.
+  - Kontrol navigasi canvas terintegrasi (Zoom In, Zoom Out, Reset Pan/Zoom, Fit View) dan kartu inspeksi detail entitas.
+- **Progressive Web App (PWA) Support**:
+  - Rute manifest dinamis Next.js App Router (`frontend/app/manifest.ts`) pada `/manifest.webmanifest`.
+  - Icon PWA beresolusi tinggi 192px dan 512px serta Apple Touch Icon (`frontend/public/icon-192.png`, `frontend/public/icon-512.png`, `frontend/public/apple-touch-icon.png`) berlatar pastel.
+  - Konfigurasi meta tag viewport dan `appleWebApp` pada `frontend/app/layout.tsx` untuk pengalaman fullscreen layaknya native app.
+
+#### Diubah & Ditingkatkan (Changed)
+- **Restorasi Tema Warna Pastel Material Design 3 Expressive (Anti AI-Slop)**:
+  - Mengembalikan palet warna pastel asli (*seed color* `#F9EDE1`) di `frontend/app/globals.css` untuk mode terang (*light*) dan mode gelap (*dark*).
+  - Menghilangkan secara menyeluruh seluruh garis pelangi (*rainbow bars* / multicolored gradient borders) di semua halaman aplikasi (`signal`, `foreign`, `konglo`, `whales`, `backtest`, `login`, `pending`).
+  - Standarisasi kontainer header di seluruh halaman dengan `rounded-3xl` dan border `var(--md-sys-color-outline-variant)/60`.
+- **Penyederhanaan Header Beranda (`frontend/app/page.tsx`)**:
+  - Menghapus keterangan teknis yang padat (*Universe Assets*, *Watchlist Active*, *Engine Regime*, *Matching Algorithm*, serta tombol *Parameter Mode*).
+  - Mengganti status database menjadi Assist Chip MD3 yang ringkas dan informatif: `Data Terkini: 28 Sep 2026`.
+
+#### Verifikasi Kualitas
+- **Backend Test Suite**: 61 skenario pengujian unit & integrasi lulus 100% (`61 passed, 2 warnings in 80.73s`).
+- **Frontend Build**: Sukses terkompilasi melalui Turbopack (`npm run build`) dengan 0 TypeScript error.
+
+---
+
 ## [1.2.0] - 2026-09-25
 
 ### 🧹 Eliminasi Dead Code, Restrukturisasi Folder, Fitur Konglomerasi & Verifikasi Penuh

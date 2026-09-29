@@ -6,7 +6,13 @@ import useSWR from "swr";
 import { Icon } from "@iconify/react";
 import { fmtRp, fmtPct, signedColor } from "@/lib/format";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: Gagal memuat data`);
+  }
+  return res.json();
+};
 
 interface ConfluenceRow {
   ticker: string;
@@ -50,15 +56,15 @@ export default function ConfluenceScreenerTab() {
     let result = rawRows.filter((row) => {
       const matchSearch =
         !search ||
-        row.ticker.toUpperCase().includes(search.toUpperCase()) ||
+        (row.ticker && row.ticker.toUpperCase().includes(search.toUpperCase())) ||
         (row.company_name && row.company_name.toLowerCase().includes(search.toLowerCase())) ||
         (row.group_name && row.group_name.toLowerCase().includes(search.toLowerCase()));
 
       const matchTag = selectedTag === "ALL" || (row.quick_tags && row.quick_tags.includes(selectedTag));
-      const matchSignal = selectedSignal === "ALL" || row.signal.toLowerCase().includes(selectedSignal.toLowerCase());
-      const matchConviction = row.conviction_score >= minConviction;
+      const matchSignal = selectedSignal === "ALL" || (row.signal && row.signal.toLowerCase().includes(selectedSignal.toLowerCase()));
+      const matchConviction = (row.conviction_score ?? 0) >= minConviction;
 
-      return matchSearch && matchTag && matchSignal && matchConviction;
+      return Boolean(matchSearch && matchTag && matchSignal && matchConviction);
     });
 
     result.sort((a, b) => {
@@ -308,6 +314,12 @@ export default function ConfluenceScreenerTab() {
                 <tr>
                   <td colSpan={13} className="py-12 text-center text-[var(--md-sys-color-on-surface-variant)] animate-pulse">
                     Menghitung parameter konfluensi bandarmology & foreign flow...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={13} className="py-12 text-center text-rose-400">
+                    Gagal memuat data screener: {error.message || "Koneksi backend terputus"}. Silakan coba lagi.
                   </td>
                 </tr>
               ) : processedRows.length === 0 ? (

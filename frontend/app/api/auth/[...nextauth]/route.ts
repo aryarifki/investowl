@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, account, user }) {
       if (account && user) {
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+          const apiUrl = process.env.INTERNAL_BACKEND_URL || "http://127.0.0.1:8001";
           const res = await fetch(`${apiUrl}/api/users/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

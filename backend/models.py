@@ -103,7 +103,8 @@ class User(Base):
     image: Mapped[str | None] = mapped_column(String(512), nullable=True)
     provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     role: Mapped[str] = mapped_column(String(50), default="user")
-    is_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=True)
+    watchlist: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

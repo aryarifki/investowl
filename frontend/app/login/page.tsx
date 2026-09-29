@@ -19,10 +19,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-lg flex flex-col gap-6 relative z-10 my-8">
         {/* KARTU UTAMA LOGIN */}
-        <div className="bg-[var(--md-sys-color-surface-container)] rounded-2xl p-7 sm:p-9 shadow-md border border-[var(--md-sys-color-outline-variant)] relative overflow-hidden backdrop-blur-xs">
-          {/* Subtle Top Accent Line */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-[var(--md-sys-color-primary)] to-emerald-500"></div>
-
+        <div className="bg-[var(--md-sys-color-surface-container)] rounded-3xl p-7 sm:p-9 shadow-md border border-[var(--md-sys-color-outline-variant)]/60 relative overflow-hidden backdrop-blur-xs">
           {/* Header Brand */}
           <div className="flex flex-col items-center text-center mb-8 mt-2">
             <div className="w-16 h-16 mb-4 relative drop-shadow-sm">

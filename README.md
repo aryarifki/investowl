@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Cache-Redis-DC382D?style=flat-square&logo=redis)](https://redis.io/)
 [![Tailwind CSS v4](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/Tests-38%20Passed-brightgreen?style=flat-square&logo=pytest)](https://docs.pytest.org/)
+[![Tests](https://img.shields.io/badge/Tests-61%20Passed-brightgreen?style=flat-square&logo=pytest)](https://docs.pytest.org/)
 
 **Re-Tracker (The Investowl)** adalah platform analitik kuantitatif pasar modal tingkat lanjut (*Institutional Grade*) yang dirancang khusus untuk menganalisis **Bandarmologi (Smart Money Flow)** dan **Foreign Flow** pada saham-saham Bursa Efek Indonesia (IDX).
 
@@ -33,11 +33,26 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
 
 ## 🌟 Fitur Utama
 
+- **🎨 Desain Pastel Material 3 Expressive (Anti AI-Slop)**:
+  - Palet warna pastel natural, lembut, dan konsisten di seluruh aplikasi berbasis seed token MD3 (`#F9EDE1`).
+  - Menghilangkan sepenuhnya garis gradien pelangi (*rainbow bars*), border neon, dan elemen visual berlebih untuk keterbacaan data finansial yang profesional dan nyaman di mata.
+  - Header beranda yang bersih dan minimalis dengan indikator status sinkronisasi data ringkas (*Assist Chip*).
+- **⚡ Guest Mode & Google OAuth Watchlist Sync**:
+  - **Akses Publik Bebas Hambatan**: Pengguna langsung dapat mengeksplorasi seluruh fitur dan analitik pasar tanpa diwajibkan login di awal.
+  - **Sinkronisasi Cloud Terpusat**: Tersedia tombol login Google OAuth di kanan atas navbar untuk menyimpan dan mensinkronisasikan daftar pantau saham (*watchlist*) ke PostgreSQL (`/api/users/{email}/watchlist`).
+- **⭐ Bookmark Bintang Langsung di Detail Saham (`/[ticker]`)**:
+  - Tombol bookmark bintang interaktif di samping kode emiten untuk menambah atau menghapus saham dari watchlist secara instan.
+  - Mendukung sinkronisasi ganda: tersimpan lokal via `localStorage` dan otomatis ter-sync ke cloud database saat pengguna login.
+- **📱 Progressive Web App (PWA) Installable**:
+  - Siap diinstal langsung ke perangkat mobile (Android/iOS) dan desktop melalui opsi *Add to Home Screen*.
+  - Dilengkapi rute manifest dinamis Next.js (`/manifest.webmanifest`), ikon aplikasi pastel beresolusi tinggi (192px & 512px), dan kompatibilitas status bar standalone.
 - **🦉 Smart Money & Bandarmologi Engine**:
   - Rekonstruksi aliran transaksi broker harian menggunakan algoritma *Greedy Matching* volume-price.
   - Klasifikasi profil partisipan pasar secara otomatis (Asing, Domestik Institusi, Pemerintah, dan Ritel).
   - Evaluasi konsentrasi akumulasi/distribusi Top-1, Top-3, dan Top-5 broker beserta rentang waktu (*window lookback*).
-- **🏢 Konglo (Conglomerate Group Matrix)**:
+- **🏢 Peta Jejaring Kepemilikan & Matriks Konglomerasi (`/konglo`)**:
+  - **Interactive Ownership Network Graph**: Peta jejaring silsilah kepemilikan saham berorientasi horizontal tree yang sangat intuitif (Konglomerasi $\rightarrow$ Entitas Induk/Holding $\rightarrow$ Emiten Publik BEI).
+  - **Smart Search & Autocomplete**: Kolom pencarian cerdas yang memunculkan rekomendasi emiten, holding, atau grup secara otomatis dengan navigasi zoom/pan langsung.
   - Pelacakan rotasi modal dan aliran dana Smart Money pada 8 konglomerasi ekonomi terbesar di IDX:
     1. **Grup Djarum** (BBCA, TOWR, BELI, RANC)
     2. **Grup Barito** (BREN, BRPT, TPIA, CUAN, PTRO)
@@ -64,8 +79,7 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
   - Grafik harga & volume interaktif responsif berbasis Recharts dan Apache ECharts.
   - Grafik profil flow bar dan distribusi akumulasi broker.
 - **🛡️ Autentikasi & Keamanan Multi-Tier**:
-  - Login aman menggunakan Google OAuth melalui NextAuth.js.
-  - *Admin Approval Gate*: Akun baru berstatus pending hingga diverifikasi oleh administrator melalui `/admin`.
+  - Login aman menggunakan Google OAuth melalui NextAuth.js dengan integrasi token JWT terproteksi.
   - Rate limiting berbasis IP/endpoint menggunakan Redis terpusat.
 - **🖥️ Live System Log Terminal**:
   - Pemantau log real-time di antarmuka web (`/logs`) dengan tampilan emulator terminal Linux untuk memantau aktivitas background worker, pipeline ingestion data, dan error runtime.
@@ -397,6 +411,8 @@ investowl/
 | `GET` | `/api/v1/auth/me` | `auth.py` | Memeriksa status login dan approval user aktif. |
 | `GET` | `/api/v1/auth/users` | `auth.py` | Daftar pengguna yang terdaftar (Khusus Admin). |
 | `POST`| `/api/v1/auth/approve/{id}`| `auth.py` | Menyetujui akses akun pengguna (Khusus Admin). |
+| `GET` | `/api/users/{email}/watchlist`| `auth.py` | Mengambil daftar pantau emiten (*watchlist*) milik user. |
+| `PUT` | `/api/users/{email}/watchlist`| `auth.py` | Menyimpan/memperbarui daftar pantau emiten (*watchlist*) milik user. |
 | `GET` | `/api/bandar/detail/{ticker}`| `bandarmology.py` | Analitik bandarmologi lengkap (Broker summary, Top-N). |
 | `GET` | `/api/broker-flow/whales` | `broker.py` | Daftar broker aktif dan klasifikasi taksonomi (Smart Foreign, Bandar, dsb). |
 | `GET` | `/api/broker-flow/whales/{code}` | `broker.py` | Akumulasi dan distribusi bersih broker spesifik beserta estimasi average price. |
@@ -412,22 +428,30 @@ investowl/
 Suite pengujian backend menggunakan `pytest`. Pastikan virtual environment aktif:
 ```bash
 cd backend
-python3 -m pytest tests/ -v
+source venv/bin/activate
+pytest tests/ -v
 ```
 
 Hasil verifikasi:
 ```text
 ============================= test session starts ==============================
 platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0
-rootdir: /root/projects/investowl
+rootdir: /root/investowl
 configfile: pytest.ini
-plugins: anyio-4.15.1
-collected 38 items / 1 skipped
+plugins: cov-7.1.0, anyio-4.15.1
+collected 61 items
 
-tests/test_bandarmology.py ....                                          [ 10%]
-tests/test_golden_characterization.py .................................. [100%]
+tests/test_backtest.py ....                                              [  6%]
+tests/test_bandarmology.py ....                                          [ 13%]
+tests/test_broker_whales.py ...                                          [ 18%]
+tests/test_foreign_analytics.py ...                                      [ 22%]
+tests/test_golden_characterization.py .................................. [ 78%]
+tests/test_konglo_graph.py ...                                           [ 83%]
+tests/test_sector_flow.py ...                                            [ 88%]
+tests/test_shareholders.py ....                                          [ 95%]
+tests/test_signal_terminal.py ...                                        [100%]
 
-================== 38 passed, 1 skipped, 2 warnings in 37.27s ==================
+================== 61 passed, 2 warnings in 80.73s (100% green) ==================
 ```
 
 ### 2. Memverifikasi Build Frontend

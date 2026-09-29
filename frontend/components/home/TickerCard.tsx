@@ -28,7 +28,7 @@ export default function TickerCard({
     <div className="relative group transition-all">
       <Link
         href={`/${item.ticker}`}
-        className="block bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] rounded-xl p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+        className="block bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 hover:border-[var(--md-sys-color-primary)] rounded-2xl p-4 transition-all duration-200 hover:shadow-sm hover:bg-[var(--md-sys-color-surface-container-high)]"
       >
         <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export default function TickerCard({
           <Sparkline data={item.spark || []} up={up} />
         </div>
         
-        <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)] pt-3">
+        <div className="grid grid-cols-3 gap-2 border-t border-[var(--md-sys-color-outline-variant)]/50 pt-3">
           <div className="flex flex-col">
             <span className="text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider mb-0.5">
               Close

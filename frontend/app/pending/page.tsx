@@ -15,10 +15,7 @@ export default function PendingPage() {
 
   return (
     <div className="min-h-[100dvh] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center p-4 transition-colors duration-300">
-      <div className="w-full max-w-md bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-[24px] p-8 shadow-xl flex flex-col items-center text-center relative overflow-hidden">
-        
-        <div className="absolute top-0 left-0 w-full h-1 bg-[#f59e0b]"></div>
-
+      <div className="w-full max-w-md bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-3xl p-8 shadow-xl flex flex-col items-center text-center relative overflow-hidden">
         <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 mb-5">
             <Icon icon="ph:hourglass-medium-duotone" className="text-amber-500" width="32" />
         </div>

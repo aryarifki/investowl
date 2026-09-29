@@ -1,3 +1,4 @@
+import json
 import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -33,7 +34,7 @@ def sync_user(user_req: schemas.UserSyncRequest, db: Session = Depends(get_db)):
             image=user_req.image,
             provider=user_req.provider,
             role="admin" if is_owner else "user",
-            is_approved=is_owner  # Langsung True untuk Admin
+            is_approved=True  # Auto-approved so users can seamlessly save and sync data
         )
         db.add(user)
         db.commit()
@@ -55,3 +56,23 @@ def approve_user(user_id: int, approval: schemas.UserApprovalRequest, db: Sessio
     db.commit()
     db.refresh(user)
     return user
+
+@router.get("/{email}/watchlist")
+def get_user_watchlist(email: str, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user or not user.watchlist:
+        return {"watchlist": []}
+    try:
+        data = json.loads(user.watchlist)
+        return {"watchlist": data if isinstance(data, list) else []}
+    except Exception:
+        return {"watchlist": []}
+
+@router.put("/{email}/watchlist")
+def update_user_watchlist(email: str, payload: schemas.UserWatchlistUpdate, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    user.watchlist = json.dumps(payload.watchlist)
+    db.commit()
+    return {"status": "ok", "watchlist": payload.watchlist}

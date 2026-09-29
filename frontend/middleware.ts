@@ -3,30 +3,40 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    const isApproved = req.nextauth.token?.is_approved;
+    const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Jika user SUDAH login tapi BELUM di-approve, arahkan ke /pending
-    if (!isApproved && path !== "/pending" && path !== "/login") {
-      return NextResponse.redirect(new URL("/pending", req.url));
+    // Proteksi halaman admin hanya untuk akun dengan role admin
+    if (path.startsWith("/admin")) {
+      if (token?.role !== "admin") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
     }
-    
-    // Jika user SUDAH di-approve dan mencoba masuk ke halaman /pending, kembalikan ke home (/)
-    if (isApproved && path === "/pending") {
+
+    // Redirect halaman pending ke home karena akses publik terbuka
+    if (path === "/pending") {
       return NextResponse.redirect(new URL("/", req.url));
     }
   },
   {
     callbacks: {
-      // Izinkan akses middleware jika token (sesi) valid
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+        // Hanya rute admin yang wajib login dan ber-role admin
+        if (path.startsWith("/admin")) {
+          return !!token && token.role === "admin";
+        }
+        // Semua rute lainnya terbuka untuk umum (guest) tanpa wajib login
+        return true;
+      },
     },
   }
 );
 
 export const config = {
-  // Lindungi semua halaman KECUALI route autentikasi API, login, dan file statis (logo, fonts, js)
+  // Hanya jalankan middleware untuk proteksi admin dan redirect pending
   matcher: [
-    "/((?!login|_next/static|_next/image|favicon.ico|api/auth|logo.png).*)"
+    "/admin/:path*",
+    "/pending",
   ],
 };

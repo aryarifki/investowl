@@ -6,7 +6,13 @@ import useSWR from "swr";
 import { Icon } from "@iconify/react";
 import { fmtRp, fmtPct, signedColor } from "@/lib/format";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: Gagal memuat data`);
+  }
+  return res.json();
+};
 
 interface ActiveSignal {
   id: string;
@@ -85,12 +91,12 @@ export default function DailyAlgoSignalsTab() {
     return dailySignals.filter((item) => {
       const matchSearch =
         !search ||
-        item.ticker.toUpperCase().includes(search.toUpperCase());
+        (item.ticker && item.ticker.toUpperCase().includes(search.toUpperCase()));
       const phase = item.features?.wyckoff_phase || item.features?.wp || "-";
       const matchPhase = selectedPhase === "ALL" || phase === selectedPhase;
       const matchLabel = selectedMlLabel === "ALL" || item.ml_label === selectedMlLabel;
-      const matchComposite = item.composite_score >= minComposite;
-      return matchSearch && matchPhase && matchLabel && matchComposite;
+      const matchComposite = (item.composite_score ?? 0) >= minComposite;
+      return Boolean(matchSearch && matchPhase && matchLabel && matchComposite);
     });
   }, [dailySignals, search, selectedPhase, selectedMlLabel, minComposite]);
 
@@ -327,6 +333,12 @@ export default function DailyAlgoSignalsTab() {
                 <tr>
                   <td colSpan={11} className="py-8 text-center text-[var(--md-sys-color-on-surface-variant)] animate-pulse">
                     Memuat data sinyal harian algoritma...
+                  </td>
+                </tr>
+              ) : dailyError ? (
+                <tr>
+                  <td colSpan={11} className="py-8 text-center text-rose-400">
+                    Gagal memuat data sinyal: {dailyError.message || "Koneksi backend terputus"}. Silakan coba lagi.
                   </td>
                 </tr>
               ) : filteredDaily.length === 0 ? (
