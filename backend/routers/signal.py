@@ -159,7 +159,7 @@ def get_backtest_history(
         query_str += " WHERE s.status = :status_val"
         params["status_val"] = status_filter
 
-    query_str += " ORDER BY s.signal_date DESC, s.id DESC LIMIT :limit OFFSET :offset"
+    query_str += " ORDER BY s.signal_date DESC, (s.features_snapshot->>'composite_score')::numeric DESC NULLS LAST, s.ticker ASC LIMIT :limit OFFSET :offset"
 
     rows = db.execute(text(query_str), params).fetchall()
 
@@ -192,31 +192,37 @@ def get_backtest_history(
 
 @router.get("/active")
 def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
-    """Mengambil daftar sinyal aktif (status = OPEN) dengan target gain, stop risk, dan R:R."""
+    """Mengambil daftar sinyal aktif (status = OPEN) diurutkan berdasarkan skor kuantitatif tertinggi."""
     q = text("""
         SELECT 
             s.id, s.ticker, s.signal_date, s.entry_price, s.tp_price, s.sl_price,
             s.status, s.days_held, s.features_snapshot,
-            f.company_name, f.group_name
+            f.company_name, f.group_name,
+            COALESCE(a.composite_score, (s.features_snapshot->>'composite_score')::numeric, 0) as real_composite_score,
+            a.features_snapshot as daily_features
         FROM signals s
         LEFT JOIN (
             SELECT DISTINCT ON (ticker) ticker, company_name, group_name
             FROM analytics_foreign_flow
         ) f ON s.ticker = f.ticker
+        LEFT JOIN analytics_daily_signals a ON (s.ticker = a.ticker AND s.signal_date = a.date)
         WHERE s.status = 'OPEN'
-        ORDER BY s.signal_date DESC, s.id DESC
+        ORDER BY s.signal_date DESC, real_composite_score DESC, s.ticker ASC
         LIMIT :limit
     """)
     rows = db.execute(q, {"limit": limit}).fetchall()
     data = []
     for r in rows:
         feat = r.features_snapshot if isinstance(r.features_snapshot, dict) else json.loads(r.features_snapshot or "{}")
+        daily_feat = r.daily_features if isinstance(r.daily_features, dict) else (json.loads(r.daily_features) if r.daily_features else {})
         entry = float(r.entry_price) if r.entry_price is not None else 0.0
         tp = float(r.tp_price) if r.tp_price is not None else 0.0
         sl = float(r.sl_price) if r.sl_price is not None else 0.0
         target_gain = round(((tp - entry) / entry) * 100.0, 2) if entry > 0 else 0.0
         stop_risk = round(((entry - sl) / entry) * 100.0, 2) if entry > 0 else 0.0
         rr = round(target_gain / stop_risk, 2) if stop_risk > 0 else 0.0
+
+        comp_score = float(r.real_composite_score) if r.real_composite_score is not None else float(feat.get("composite_score", 0))
 
         data.append({
             "id": r.id,
@@ -232,13 +238,13 @@ def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
             "risk_reward_ratio": rr,
             "status": r.status or "OPEN",
             "days_held": r.days_held if r.days_held is not None else 0,
-            "composite_score": feat.get("composite_score", 0),
-            "wyckoff_phase": feat.get("wp", "-"),
-            "cmf": feat.get("cmf_v"),
-            "mfi": feat.get("mfi_v"),
-            "rsi": feat.get("rsi_v"),
-            "vcp_grade": feat.get("vcp_grade", "NONE"),
-            "gate_notes": feat.get("gate_notes", ""),
+            "composite_score": int(round(comp_score)),
+            "wyckoff_phase": daily_feat.get("wyckoff_phase") or feat.get("wp", "-"),
+            "cmf": daily_feat.get("cmf") if daily_feat.get("cmf") is not None else feat.get("cmf_v"),
+            "mfi": daily_feat.get("mfi") if daily_feat.get("mfi") is not None else feat.get("mfi_v"),
+            "rsi": daily_feat.get("rsi") if daily_feat.get("rsi") is not None else feat.get("rsi_v"),
+            "vcp_grade": daily_feat.get("vcp_grade") or feat.get("vcp_grade", "NONE"),
+            "gate_notes": daily_feat.get("gate_notes") or feat.get("gate_notes", ""),
             "features": feat
         })
     return {
