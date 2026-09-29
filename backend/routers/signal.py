@@ -1,11 +1,15 @@
-# backend/routers/signal.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from datetime import date
+from typing import Optional, List
 import json
+import time
+import pandas as pd
 
 from database import get_db
+from idx_bandarmology import storage, analysis
+from routers.bandarmology import get_dynamic_universe, _conviction_score
 
 router = APIRouter(prefix="/api/signal", tags=["AI Signals"])
 
@@ -184,3 +188,275 @@ def get_backtest_history(
         "count": len(history),
         "data": history
     }
+
+
+@router.get("/active")
+def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
+    """Mengambil daftar sinyal aktif (status = OPEN) dengan target gain, stop risk, dan R:R."""
+    q = text("""
+        SELECT 
+            s.id, s.ticker, s.signal_date, s.entry_price, s.tp_price, s.sl_price,
+            s.status, s.days_held, s.features_snapshot,
+            f.company_name, f.group_name
+        FROM signals s
+        LEFT JOIN (
+            SELECT DISTINCT ON (ticker) ticker, company_name, group_name
+            FROM analytics_foreign_flow
+        ) f ON s.ticker = f.ticker
+        WHERE s.status = 'OPEN'
+        ORDER BY s.signal_date DESC, s.id DESC
+        LIMIT :limit
+    """)
+    rows = db.execute(q, {"limit": limit}).fetchall()
+    data = []
+    for r in rows:
+        feat = r.features_snapshot if isinstance(r.features_snapshot, dict) else json.loads(r.features_snapshot or "{}")
+        entry = float(r.entry_price) if r.entry_price is not None else 0.0
+        tp = float(r.tp_price) if r.tp_price is not None else 0.0
+        sl = float(r.sl_price) if r.sl_price is not None else 0.0
+        target_gain = round(((tp - entry) / entry) * 100.0, 2) if entry > 0 else 0.0
+        stop_risk = round(((entry - sl) / entry) * 100.0, 2) if entry > 0 else 0.0
+        rr = round(target_gain / stop_risk, 2) if stop_risk > 0 else 0.0
+
+        data.append({
+            "id": r.id,
+            "ticker": r.ticker,
+            "company_name": r.company_name or r.ticker,
+            "group_name": r.group_name or "-",
+            "signal_date": str(r.signal_date) if r.signal_date else None,
+            "entry_price": entry,
+            "tp_price": tp,
+            "sl_price": sl,
+            "target_gain_pct": target_gain,
+            "stop_risk_pct": stop_risk,
+            "risk_reward_ratio": rr,
+            "status": r.status or "OPEN",
+            "days_held": r.days_held if r.days_held is not None else 0,
+            "composite_score": feat.get("composite_score", 0),
+            "wyckoff_phase": feat.get("wp", "-"),
+            "cmf": feat.get("cmf_v"),
+            "mfi": feat.get("mfi_v"),
+            "rsi": feat.get("rsi_v"),
+            "vcp_grade": feat.get("vcp_grade", "NONE"),
+            "gate_notes": feat.get("gate_notes", ""),
+            "features": feat
+        })
+    return {
+        "count": len(data),
+        "data": data
+    }
+
+
+_confluence_cache: dict[str, dict] = {}
+_CONFLUENCE_TTL = 180  # 3 minutes
+
+
+@router.get("/confluence-screener")
+def get_confluence_screener(
+    universe_mode: str = "lq45",
+    analysis_date: Optional[str] = None,
+    window_days: int = 20,
+    tickers: Optional[str] = None,
+    min_conviction: float = 0.0,
+    tag_filter: Optional[str] = None,
+    signal_filter: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Multi-parameter confluence screener combining bandarmology conviction, foreign flow HMM, and float stats."""
+    cache_key = f"{universe_mode}|{analysis_date}|{window_days}|{tickers}"
+    now_ts = time.time()
+    cached_entry = _confluence_cache.get(cache_key)
+
+    if cached_entry and (now_ts - cached_entry["time"] < _CONFLUENCE_TTL):
+        raw_results = cached_entry["data"]
+        meta_info = cached_entry["meta"]
+    else:
+        if tickers:
+            ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+        else:
+            ticker_list = get_dynamic_universe(universe_mode)
+
+        if not ticker_list:
+            return {"count": 0, "meta": {}, "data": []}
+
+        ticker_list = ticker_list[:100]
+
+        analysis_ts = pd.Timestamp(analysis_date) if analysis_date else pd.Timestamp.today()
+        cutoff_date = (analysis_ts - pd.Timedelta(days=window_days + 30)).strftime("%Y-%m-%d")
+
+        flow_df = storage.read_broker_flow(ticker_list, start_date=cutoff_date)
+        act_df = storage.read_broker_activity(ticker_list, start_date=cutoff_date)
+        px_df = storage.read_prices(ticker_list, start_date=cutoff_date)
+
+        try:
+            scan_10d = analysis.broker_alpha_scan(
+                ticker_list, horizon=10, min_events=5, min_net_value=0,
+                group_by=("ticker", "broker_code")
+            )
+        except Exception:
+            scan_10d = pd.DataFrame()
+
+        q_meta = text("""
+            SELECT f.ticker, f.company_name, f.group_name, f.features,
+                   s.free_float_pct
+            FROM (
+                SELECT DISTINCT ON (ticker) ticker, company_name, group_name, features
+                FROM analytics_foreign_flow
+                WHERE ticker = ANY(:tickers)
+            ) f
+            LEFT JOIN (
+                SELECT ticker, 100.0 - COALESCE(SUM(pct), 0) as free_float_pct
+                FROM company_shareholders
+                WHERE ticker = ANY(:tickers) AND (is_controlling = true OR pct >= 5.0)
+                GROUP BY ticker
+            ) s ON f.ticker = s.ticker
+        """)
+        meta_rows = db.execute(q_meta, {"tickers": ticker_list}).fetchall()
+        meta_map = {r.ticker: r for r in meta_rows}
+
+        flow_groups = {t: sub for t, sub in flow_df.groupby("ticker")} if not flow_df.empty else {}
+        act_groups = {t: sub for t, sub in act_df.groupby("ticker")} if not act_df.empty else {}
+        px_groups = {t: sub for t, sub in px_df.groupby("ticker")} if not px_df.empty else {}
+
+        raw_results = []
+        for t in ticker_list:
+            t_flow = flow_groups.get(t, pd.DataFrame())
+            t_act = act_groups.get(t, pd.DataFrame())
+            t_px = px_groups.get(t, pd.DataFrame())
+
+            if t_flow.empty:
+                continue
+
+            t_flow = t_flow[t_flow["date"] <= analysis_ts].sort_values("date")
+            if t_flow.empty:
+                continue
+
+            latest_flow = t_flow.iloc[-1]
+            raw_sig = latest_flow.get("bandar_signal", "NEUTRAL")
+            sig = str(raw_sig).replace("_", " ").title() if pd.notna(raw_sig) else "Neutral"
+
+            curr_px = 0.0
+            if not t_px.empty:
+                t_px_filtered = t_px[t_px["date"] <= analysis_ts].sort_values("date")
+                if not t_px_filtered.empty and pd.notna(t_px_filtered.iloc[-1]["close"]):
+                    curr_px = float(t_px_filtered.iloc[-1]["close"])
+
+            foreign_5d = float(t_flow.tail(5)["foreign_net_broker"].fillna(0).sum())
+
+            try:
+                conv = _conviction_score(raw_sig, foreign_5d, scan_10d, t)
+                conv_score = float(conv.get("score", 50.0))
+            except Exception:
+                conv_score = 50.0
+
+            bandar_avg = 0.0
+            top_buyer = "-"
+            top_seller = "-"
+            smart_foreign_net = 0.0
+            gorengan_net = 0.0
+
+            if not t_act.empty:
+                t_act_filtered = t_act[t_act["date"] <= analysis_ts].sort_values("date")
+                if not t_act_filtered.empty:
+                    latest_act_date = t_act_filtered["date"].max()
+                    latest_act = t_act_filtered[t_act_filtered["date"] == latest_act_date]
+
+                    buyers = latest_act[latest_act["net_value"] > 0].sort_values("net_value", ascending=False)
+                    sellers = latest_act[latest_act["net_value"] < 0].sort_values("net_value", ascending=True)
+
+                    if not buyers.empty:
+                        top_buyer = str(buyers.iloc[0]["broker_code"])
+                        b5 = buyers.head(5)
+                        b_val = b5["buy_value"].sum()
+                        b_lot = b5["buy_lot"].sum()
+                        if b_lot > 0:
+                            bandar_avg = round(float(b_val / (b_lot * 100)), 1)
+
+                    if not sellers.empty:
+                        top_seller = str(sellers.iloc[0]["broker_code"])
+
+                    smart_foreign_net = float(latest_act[latest_act["broker_code"].isin(["AK", "BK", "KZ", "CS"])]["net_value"].sum())
+                    gorengan_net = float(latest_act[latest_act["broker_code"].isin(["MG", "SQ", "CP", "EP", "XC", "YP"])]["net_value"].sum())
+
+            if curr_px == 0.0 and bandar_avg > 0:
+                curr_px = bandar_avg
+
+            distance_pct = round(((curr_px - bandar_avg) / bandar_avg) * 100.0, 2) if bandar_avg > 0 else 0.0
+
+            m = meta_map.get(t)
+            comp_name = m.company_name if m and m.company_name else t
+            group_name = m.group_name if m and m.group_name else "-"
+            free_float = round(float(m.free_float_pct), 1) if m and m.free_float_pct is not None else 0.0
+            features = m.features if m and m.features else {}
+            foreign_z = features.get("foreign_zscore", 0.0) if isinstance(features, dict) else 0.0
+
+            if foreign_z > 1.0:
+                foreign_hmm = "Strong Accumulation"
+            elif foreign_z > 0.3:
+                foreign_hmm = "Accumulation"
+            elif foreign_z < -1.0:
+                foreign_hmm = "Strong Distribution"
+            elif foreign_z < -0.3:
+                foreign_hmm = "Distribution"
+            else:
+                foreign_hmm = "Neutral / Transition"
+
+            quick_tags = []
+            raw_upper = str(raw_sig).upper()
+            if conv_score >= 70 and "ACCUMULATION" in raw_upper and -5 <= distance_pct <= 5:
+                quick_tags.append("GOLDEN_CONFLUENCE")
+            if "ACCUMULATION" in raw_upper and distance_pct < 0:
+                quick_tags.append("STEALTH_ACCUMULATION")
+            if gorengan_net > 500_000_000 and abs(distance_pct) < 15:
+                quick_tags.append("GORENGAN_MOMENTUM")
+            if curr_px > bandar_avg and "DISTRIBUTION" in raw_upper:
+                quick_tags.append("DISTRIBUTION_TRAP")
+            if 0 < free_float <= 25.0:
+                quick_tags.append("LOW_FLOAT")
+
+            raw_results.append({
+                "ticker": t,
+                "company_name": comp_name,
+                "group_name": group_name,
+                "current_price": curr_px,
+                "signal": sig,
+                "conviction_score": conv_score,
+                "bandar_avg_price": bandar_avg,
+                "bandar_price_distance_pct": distance_pct,
+                "foreign_5d": foreign_5d,
+                "smart_foreign_net": smart_foreign_net,
+                "gorengan_net": gorengan_net,
+                "foreign_hmm_state": foreign_hmm,
+                "free_float_est": free_float,
+                "top_buyer": top_buyer,
+                "top_seller": top_seller,
+                "quick_tags": quick_tags
+            })
+
+        raw_results.sort(key=lambda x: x["conviction_score"], reverse=True)
+        meta_info = {
+            "universe_mode": universe_mode,
+            "window_days": window_days,
+            "analysis_date": str(analysis_ts.date()),
+            "cached": False
+        }
+        _confluence_cache[cache_key] = {
+            "time": now_ts,
+            "data": raw_results,
+            "meta": {**meta_info, "cached": True}
+        }
+
+    filtered = raw_results
+    if min_conviction > 0:
+        filtered = [x for x in filtered if x["conviction_score"] >= min_conviction]
+    if tag_filter:
+        filtered = [x for x in filtered if tag_filter.upper() in x["quick_tags"]]
+    if signal_filter:
+        filtered = [x for x in filtered if signal_filter.lower() in x["signal"].lower()]
+
+    return {
+        "count": len(filtered),
+        "meta": meta_info,
+        "data": filtered
+    }
+

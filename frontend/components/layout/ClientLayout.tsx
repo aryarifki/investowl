@@ -17,7 +17,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isAuthPage = pathname === "/login" || pathname === "/pending";
 
   const isHome = pathname === "/";
-  const isDetail = !isHome && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
+  const isSignal = pathname.includes("/signal");
+  const isDetail = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
   const isWhales = pathname.includes("/whales");
@@ -83,6 +84,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <Link href={detailPath} className={desktopNavLinkClass(isDetail)}>
                 <Icon icon={isDetail ? "ph:chart-line-up-fill" : "ph:chart-line-up-duotone"} width="15" />
                 <span>Emiten</span>
+              </Link>
+              <Link href="/signal" className={desktopNavLinkClass(isSignal)}>
+                <Icon icon={isSignal ? "ph:broadcast-fill" : "ph:broadcast-duotone"} width="15" />
+                <span>Signal</span>
               </Link>
               <Link href="/foreign" className={desktopNavLinkClass(isForeign)}>
                 <Icon icon={isForeign ? "ph:globe-stand-fill" : "ph:globe-stand-duotone"} width="15" />

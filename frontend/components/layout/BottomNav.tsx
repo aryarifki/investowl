@@ -10,7 +10,8 @@ export default function BottomNav() {
   const { activeTicker } = useAppStore();
 
   const isHome = pathname === "/";
-  const isDashboard = !isHome && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
+  const isSignal = pathname.includes("/signal");
+  const isDashboard = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
   const isWhales = pathname.includes("/whales");
@@ -48,6 +49,13 @@ export default function BottomNav() {
             <Icon icon={isDashboard ? "ph:chart-line-up-fill" : "ph:chart-line-up-duotone"} width="20" />
           </div>
           <span className="text-[10px] mt-0.5 font-medium tracking-tight">Detail</span>
+        </Link>
+
+        <Link href="/signal" className={navItemClass(isSignal)}>
+          <div className={iconWrapper(isSignal)}>
+            <Icon icon={isSignal ? "ph:broadcast-fill" : "ph:broadcast-duotone"} width="20" />
+          </div>
+          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Signal</span>
         </Link>
 
         <Link href="/foreign" className={navItemClass(isForeign)}>
