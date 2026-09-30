@@ -9,6 +9,7 @@ import RefreshButton from "./RefreshButton";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
 import LogoutButton from "./LogoutButton";
+import CacheLoadingOverlay from "@/components/ui/CacheLoadingOverlay";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <>
+      {/* GLOBAL CACHE LOADING TRANSPARENT OVERLAY */}
+      <CacheLoadingOverlay />
+
       {/* GLOBAL TOP NAVIGATION */}
       <header className="sticky top-0 z-40 w-full border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]/90 backdrop-blur-md transition-colors duration-200">
         <div className="flex items-center justify-between px-3 sm:px-6 h-14 max-w-7xl mx-auto">

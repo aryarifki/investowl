@@ -29,7 +29,8 @@ export default function Sidebar() {
     universe, setUniverse, analysisDate, setAnalysisDate,
     windowDays, setWindowDays, horizon, setHorizon,
     minEvents, setMinEvents, minNetBuy, setMinNetBuy,
-    localWatchlist, setLocalWatchlist
+    localWatchlist, setLocalWatchlist,
+    setCacheLoading
   } = useAppStore();
 
   const [universeOpen, setUniverseOpen] = useState(false);
@@ -90,20 +91,53 @@ export default function Sidebar() {
   const handleRefreshMaster = async () => {
     if (isRefreshingMaster) return;
     setIsRefreshingMaster(true);
+    setCacheLoading({
+      isOpen: true,
+      title: "Pembaruan Master Tickers & Cache",
+      step: "Mengunduh dan memperbarui daftar universe ticker emiten...",
+      detail: "POST /api/bandar/universe/refresh",
+      progress: 30,
+      isSuccess: false,
+    });
     try {
       const res = await fetch("/api/bandar/universe/refresh", { method: "POST" });
       const json = await res.json();
       if (json.status === "success") {
+        setCacheLoading({
+          step: "Membersihkan cache aplikasi untuk memuat universe baru...",
+          detail: "POST /api/logs/cache/purge?pattern=*",
+          progress: 75,
+        });
         await fetch("/api/logs/cache/purge?pattern=*", { method: "POST" });
         await mutate("/api/bandar/universe/all");
         await mutateStatus();
         await mutate(() => true, undefined, { revalidate: true });
-        alert(`Sukses: ${json.message}`);
+
+        setCacheLoading({
+          step: `Sukses: ${json.message || "Master tickers berhasil diperbarui!"}`,
+          detail: "Status: 200 OK — Cache Invalidated",
+          progress: 100,
+          isSuccess: true,
+        });
+        setTimeout(() => setCacheLoading({ isOpen: false, isSuccess: false }), 800);
       } else {
-        alert(`Gagal: ${json.error || "Gagal refresh master tickers"}`);
+        setCacheLoading({
+          step: `Gagal: ${json.error || "Gagal refresh master tickers"}`,
+          detail: "Status: Error",
+          progress: 100,
+          isSuccess: false,
+        });
+        setTimeout(() => setCacheLoading({ isOpen: false }), 1200);
       }
     } catch (e: unknown) {
-      alert(`Error koneksi: ${e instanceof Error ? e.message : String(e)}`);
+      const errMsg = e instanceof Error ? e.message : String(e);
+      setCacheLoading({
+        step: `Error koneksi: ${errMsg}`,
+        detail: "Status: Connection Failed",
+        progress: 100,
+        isSuccess: false,
+      });
+      setTimeout(() => setCacheLoading({ isOpen: false }), 1500);
     } finally {
       setIsRefreshingMaster(false);
     }
@@ -111,6 +145,14 @@ export default function Sidebar() {
 
   const runPipeline = async (type: "today" | "missing" | "backfill") => {
     setPipelineRunning(type);
+    setCacheLoading({
+      isOpen: true,
+      title: "Menjalankan Pipeline Otomasi & Sinkronisasi",
+      step: `Memulai eksekusi pipeline [${type.toUpperCase()}]...`,
+      detail: `POST /api/bandar/pipeline/${type === "today" ? "run" : "backfill"}`,
+      progress: 35,
+      isSuccess: false,
+    });
     try {
       const payload: { universe_mode: string; tickers?: string[]; start_date?: string; end_date?: string } = { universe_mode: universe };
       if (universe === "watchlist" && localWatchlist.length > 0) {
@@ -142,14 +184,39 @@ export default function Sidebar() {
       }
       const json = await res.json();
       if (res.ok) {
+        setCacheLoading({
+          step: "Membersihkan cache aplikasi pasca eksekusi pipeline...",
+          detail: "POST /api/logs/cache/purge?pattern=*",
+          progress: 80,
+        });
         await fetch("/api/logs/cache/purge?pattern=*", { method: "POST" });
-        alert("Pipeline selesai dijalankan.");
-        mutate(() => true, undefined, { revalidate: true });
+        await mutate(() => true, undefined, { revalidate: true });
+
+        setCacheLoading({
+          step: "Pipeline selesai dan seluruh cache berhasil dimuat ulang!",
+          detail: "Status: 200 OK — Pipeline & Cache Synced",
+          progress: 100,
+          isSuccess: true,
+        });
+        setTimeout(() => setCacheLoading({ isOpen: false, isSuccess: false }), 800);
       } else {
-        alert("Pipeline error: " + (json.detail || "Gagal"));
+        setCacheLoading({
+          step: `Pipeline error: ${json.detail || "Gagal menjalankan pipeline"}`,
+          detail: "Status: Execution Error",
+          progress: 100,
+          isSuccess: false,
+        });
+        setTimeout(() => setCacheLoading({ isOpen: false }), 1500);
       }
     } catch (e: unknown) {
-      alert("Error: " + (e instanceof Error ? e.message : String(e)));
+      const errMsg = e instanceof Error ? e.message : String(e);
+      setCacheLoading({
+        step: `Error: ${errMsg}`,
+        detail: "Status: Connection Failed",
+        progress: 100,
+        isSuccess: false,
+      });
+      setTimeout(() => setCacheLoading({ isOpen: false }), 1500);
     } finally {
       setPipelineRunning(null);
     }
