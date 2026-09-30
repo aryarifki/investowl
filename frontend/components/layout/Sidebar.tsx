@@ -94,8 +94,10 @@ export default function Sidebar() {
       const res = await fetch("/api/bandar/universe/refresh", { method: "POST" });
       const json = await res.json();
       if (json.status === "success") {
+        await fetch("/api/logs/cache/purge?pattern=*", { method: "POST" });
         await mutate("/api/bandar/universe/all");
         await mutateStatus();
+        await mutate(() => true, undefined, { revalidate: true });
         alert(`Sukses: ${json.message}`);
       } else {
         alert(`Gagal: ${json.error || "Gagal refresh master tickers"}`);
@@ -140,6 +142,7 @@ export default function Sidebar() {
       }
       const json = await res.json();
       if (res.ok) {
+        await fetch("/api/logs/cache/purge?pattern=*", { method: "POST" });
         alert("Pipeline selesai dijalankan.");
         mutate(() => true, undefined, { revalidate: true });
       } else {
