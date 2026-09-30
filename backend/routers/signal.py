@@ -10,10 +10,12 @@ import pandas as pd
 from database import get_db
 from idx_bandarmology import storage, analysis
 from routers.bandarmology import get_dynamic_universe, _conviction_score
+from core.cache import cached, cache
 
 router = APIRouter(prefix="/api/signal", tags=["AI Signals"])
 
 @router.get("/daily")
+@cached(ttl_seconds=3600, prefix="signal")
 def get_daily_signals(limit: int = 100, db: Session = Depends(get_db)):
     """Mengambil Top AI Signals berdasarkan tanggal scan terbaru."""
     
@@ -66,6 +68,7 @@ def get_daily_signals(limit: int = 100, db: Session = Depends(get_db)):
 
 
 @router.get("/backtest/stats")
+@cached(ttl_seconds=3600, prefix="signal")
 def get_backtest_stats(db: Session = Depends(get_db)):
     """Mengambil ringkasan statistik performa backtest sinyal historis."""
     q = text("""
@@ -132,6 +135,7 @@ def get_backtest_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/backtest/history")
+@cached(ttl_seconds=1800, prefix="signal")
 def get_backtest_history(
     status: str = "ALL",
     limit: int = 50,
@@ -191,6 +195,7 @@ def get_backtest_history(
 
 
 @router.get("/active")
+@cached(ttl_seconds=3600, prefix="signal")
 def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
     """Mengambil daftar sinyal aktif (status = OPEN) diurutkan berdasarkan skor kuantitatif tertinggi."""
     q = text("""
@@ -258,6 +263,7 @@ _CONFLUENCE_TTL = 180  # 3 minutes
 
 
 @router.get("/confluence-screener")
+@cached(ttl_seconds=1800, prefix="confluence")
 def get_confluence_screener(
     universe_mode: str = "lq45",
     analysis_date: Optional[str] = None,
@@ -269,11 +275,10 @@ def get_confluence_screener(
     db: Session = Depends(get_db)
 ):
     """Multi-parameter confluence screener combining bandarmology conviction, foreign flow HMM, and float stats."""
-    cache_key = f"{universe_mode}|{analysis_date}|{window_days}|{tickers}"
-    now_ts = time.time()
-    cached_entry = _confluence_cache.get(cache_key)
+    raw_cache_key = f"confluence_raw:{universe_mode}|{analysis_date}|{window_days}|{tickers}"
+    cached_entry = cache.get(raw_cache_key)
 
-    if cached_entry and (now_ts - cached_entry["time"] < _CONFLUENCE_TTL):
+    if cached_entry:
         raw_results = cached_entry["data"]
         meta_info = cached_entry["meta"]
     else:
@@ -446,11 +451,10 @@ def get_confluence_screener(
             "analysis_date": str(analysis_ts.date()),
             "cached": False
         }
-        _confluence_cache[cache_key] = {
-            "time": now_ts,
+        cache.set(raw_cache_key, {
             "data": raw_results,
             "meta": {**meta_info, "cached": True}
-        }
+        }, ttl_seconds=3600)
 
     filtered = raw_results
     if min_conviction > 0:

@@ -34,6 +34,7 @@ from services.bandarmology_service import (
     brokerflow_cache,
     screener_cache,
 )
+from core.cache import cached
 
 router = APIRouter(prefix="/api/bandar", tags=["bandarmology"])
 
@@ -43,11 +44,13 @@ router = APIRouter(prefix="/api/bandar", tags=["bandarmology"])
 # ══════════════════════════════════════════════════════════
 
 @router.get("/universe")
+@cached(ttl_seconds=3600, prefix="bandar")
 def get_universe(mode: str = "watchlist"):
     return {"tickers": universe.get_universe(mode=mode)}
 
 
 @router.get("/tickers")
+@cached(ttl_seconds=3600, prefix="bandar")
 def master_tickers():
     try:
         return {"tickers": universe.get_master_tickers(active_only=True)}
@@ -377,6 +380,7 @@ def refresh_universe():
 # ══════════════════════════════════════════════════════════
 
 @router.get("/daily-summary")
+@cached(ttl_seconds=1800, prefix="bandar")
 def daily_summary(universe_mode: str = "all", refresh: int = 0):
     return compute_daily_summary(universe_mode=universe_mode, refresh=refresh)
 
@@ -704,6 +708,7 @@ def _sparkline_values(activity, broker_code, end_ts, days=5):
 
 
 @router.get("/detail/{ticker}")
+@cached(ttl_seconds=1800, prefix="bandar")
 def ticker_detail(
     ticker: str,
     analysis_date: str = None,

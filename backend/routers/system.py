@@ -42,3 +42,18 @@ def get_daily_logs():
             "auditor": get_latest_log("auditor")
         }
     }
+
+
+@router.get("/cache/stats")
+def get_cache_stats():
+    """Melihat status koneksi Redis dan jumlah key ter-cache."""
+    from core.cache import cache
+    return cache.get_stats()
+
+
+@router.post("/cache/purge")
+def purge_cache(pattern: str = "*"):
+    """Membersihkan cache (bisa per pola, misal 'signal:*' atau '*')."""
+    from core.cache import invalidate_cache
+    deleted_count = invalidate_cache(pattern)
+    return {"status": "success", "deleted_keys": deleted_count, "pattern": pattern}

@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
+from core.cache import cached
 
 router = APIRouter(prefix="/api/bandar/shareholders", tags=["Shareholders & Ownership"])
 
@@ -28,6 +29,7 @@ def _classify_shareholder(name: str, pct: float, is_controlling: bool) -> str:
     "/top-cross-holdings",
     summary="Daftar entitas pengendali/pemegang saham multi-emiten di BEI",
 )
+@cached(ttl_seconds=7200, prefix="shareholders")
 def get_top_cross_holdings(
     limit: int = Query(25, ge=1, le=100, description="Jumlah maksimal entitas yang dikembalikan"),
     min_holdings: int = Query(2, ge=2, le=20, description="Minimal kepemilikan saham pada berapa emiten"),
@@ -84,6 +86,7 @@ def get_top_cross_holdings(
     "/search",
     summary="Pencarian entitas atau pemegang saham dan portofolio kepemilikannya",
 )
+@cached(ttl_seconds=3600, prefix="shareholders")
 def search_shareholders(
     q: str = Query(..., min_length=2, description="Kata kunci nama pemilik atau entitas"),
     limit: int = Query(30, ge=1, le=100, description="Maksimum hasil"),
@@ -269,6 +272,7 @@ KNOWN_NAME_TO_TICKER: dict[str, str] = {
     "/groups",
     summary="Daftar grup konglomerasi yang telah dipetakan di BEI",
 )
+@cached(ttl_seconds=7200, prefix="shareholders")
 def get_conglomerate_groups() -> dict[str, Any]:
     """Mengembalikan daftar preset grup konglomerasi beserta deskripsi dan emiten utamanya."""
     groups_list = []
@@ -288,6 +292,7 @@ def get_conglomerate_groups() -> dict[str, Any]:
     "/network-graph",
     summary="Data graph jejaring kepemilikan konglomerasi / emiten",
 )
+@cached(ttl_seconds=7200, prefix="shareholders")
 def get_ownership_network_graph(
     group: Optional[str] = "barito",
     ticker: Optional[str] = None,
@@ -442,6 +447,7 @@ def get_ownership_network_graph(
     "/{ticker}",
     summary="Struktur pemegang saham lengkap untuk satu emiten",
 )
+@cached(ttl_seconds=7200, prefix="shareholders")
 def get_stock_shareholders(
     ticker: str,
     db: Session = Depends(get_db),
