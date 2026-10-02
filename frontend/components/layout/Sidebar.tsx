@@ -27,6 +27,7 @@ export default function Sidebar() {
   const { 
     sidebarOpen, setSidebarOpen, activeTicker,
     universe, setUniverse, analysisDate, setAnalysisDate,
+    isDateManual, setIsDateManual,
     windowDays, setWindowDays, horizon, setHorizon,
     minEvents, setMinEvents, minNetBuy, setMinNetBuy,
     localWatchlist, setLocalWatchlist,
@@ -67,25 +68,29 @@ export default function Sidebar() {
   const currentBackfillEnd = backfillEnd || defaultBackfillEnd;
 
   useEffect(() => {
-    if (latestAvailableDate && (!analysisDate || !availableDates.includes(analysisDate))) {
+    if (!latestAvailableDate) return;
+    // Jika tidak dalam mode manual historis, atau jika tanggal yang sedang dipilih
+    // tidak ada dalam emiten ini (misal baru ganti emiten): otomatis sync ke tanggal terbaru di DB
+    if (!isDateManual || !availableDates.includes(analysisDate)) {
       setAnalysisDate(latestAvailableDate);
+      if (!availableDates.includes(analysisDate)) {
+        setIsDateManual(false);
+      }
     }
-  }, [latestAvailableDate, analysisDate, availableDates, setAnalysisDate]);
+  }, [latestAvailableDate, isDateManual, analysisDate, availableDates, setAnalysisDate, setIsDateManual]);
 
   if (pathname === "/login" || pathname === "/pending") return null;
 
   const handleCalendarChange = (selected: string) => {
     if (!selected || availableDates.length === 0) return;
-    if (availableDates.includes(selected)) {
-      setAnalysisDate(selected);
-      return;
+    let target = selected;
+    if (!availableDates.includes(selected)) {
+      const priorDates = availableDates.filter((d) => d <= selected);
+      target = priorDates.length > 0 ? priorDates[priorDates.length - 1] : availableDates[0];
     }
-    const priorDates = availableDates.filter((d) => d <= selected);
-    if (priorDates.length > 0) {
-      setAnalysisDate(priorDates[priorDates.length - 1]);
-    } else {
-      setAnalysisDate(availableDates[0]);
-    }
+    setAnalysisDate(target);
+    // Jika user memilih tanggal yang sama dengan latestAvailableDate, otomatis kembali ke mode live terbaru
+    setIsDateManual(target !== latestAvailableDate);
   };
 
   const handleRefreshMaster = async () => {
@@ -317,10 +322,42 @@ export default function Sidebar() {
 
             {/* ANALYSIS DATE */}
             <div>
-              <label className="block text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider mb-1.5">Analysis Date</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <label className="block text-[10px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">
+                    Analysis Date
+                  </label>
+                  {isDateManual && analysisDate !== latestAvailableDate ? (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                      Historis
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                      Real Terbaru
+                    </span>
+                  )}
+                </div>
+                {isDateManual && analysisDate !== latestAvailableDate && latestAvailableDate && (
+                  <button
+                    onClick={() => {
+                      setIsDateManual(false);
+                      setAnalysisDate(latestAvailableDate);
+                    }}
+                    className="text-[9px] font-mono text-[var(--md-sys-color-primary)] hover:underline flex items-center gap-0.5 font-bold cursor-pointer"
+                    title="Kembali ke data real terbaru di database"
+                  >
+                    <Icon icon="ph:arrow-counter-clockwise-bold" width="10" />
+                    Terbaru
+                  </button>
+                )}
+              </div>
               <input
                 type="date"
-                className="w-full bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] focus:border-[var(--md-sys-color-primary)] rounded-lg px-3 py-2 text-xs font-mono text-[var(--md-sys-color-on-surface)] outline-none transition-colors"
+                className={`w-full bg-[var(--md-sys-color-surface-container)] border ${
+                  isDateManual && analysisDate !== latestAvailableDate 
+                    ? "border-amber-500/60 focus:border-amber-500" 
+                    : "border-[var(--md-sys-color-outline-variant)] focus:border-[var(--md-sys-color-primary)]"
+                } rounded-lg px-3 py-2 text-xs font-mono text-[var(--md-sys-color-on-surface)] outline-none transition-colors`}
                 value={analysisDate}
                 max={availableDates[availableDates.length - 1] || statusData?.latest_date || ""}
                 onChange={(e) => handleCalendarChange(e.target.value)}

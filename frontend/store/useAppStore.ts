@@ -17,6 +17,7 @@ interface AppState {
   summaryDays: number;
   universe: string;
   analysisDate: string;
+  isDateManual: boolean;
   windowDays: number;
   horizon: number;
   minEvents: number;
@@ -31,6 +32,7 @@ interface AppState {
   setSummaryDays: (days: number) => void;
   setUniverse: (universe: string) => void;
   setAnalysisDate: (date: string) => void;
+  setIsDateManual: (manual: boolean) => void;
   setWindowDays: (days: number) => void;
   setHorizon: (horizon: number) => void;
   setMinEvents: (events: number) => void;
@@ -48,6 +50,7 @@ export const useAppStore = create<AppState>()(
       summaryDays: 30,
       universe: "watchlist",
       analysisDate: "",
+      isDateManual: false,
       windowDays: 20,
       horizon: 10,
       minEvents: 5,
@@ -69,6 +72,7 @@ export const useAppStore = create<AppState>()(
       setSummaryDays: (days) => set({ summaryDays: days }),
       setUniverse: (universe) => set({ universe }),
       setAnalysisDate: (date) => set({ analysisDate: date }),
+      setIsDateManual: (manual) => set({ isDateManual: manual }),
       setWindowDays: (days) => set({ windowDays: days }),
       setHorizon: (horizon) => set({ horizon }),
       setMinEvents: (events) => set({ minEvents: events }),
@@ -96,13 +100,14 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "investowl-global-state",
-      version: 1, // Memaksa browser mereset data nyangkut di local storage
+      version: 2, // Reset data lama dari local storage agar selalu sync data terbaru
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => {
-        // Mengecualikan analysisDate, sidebarOpen, dan cacheLoading dari local storage persistence
+        // Mengecualikan analysisDate, isDateManual, sidebarOpen, dan cacheLoading dari local storage persistence
         const {
           sidebarOpen: _sidebarOpen,
           analysisDate: _analysisDate,
+          isDateManual: _isDateManual,
           cacheLoading: _cacheLoading,
           ...rest
         } = state;

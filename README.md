@@ -83,39 +83,73 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
   - Rate limiting berbasis IP/endpoint menggunakan Redis terpusat.
 - **🖥️ Live System Log Terminal**:
   - Pemantau log real-time di antarmuka web (`/logs`) dengan tampilan emulator terminal Linux untuk memantau aktivitas background worker, pipeline ingestion data, dan error runtime.
+- **🤖 Integrasi Telegram AI Assistant & Mobile Command Center**:
+  - Seluruh fitur utama Investowl (sinyal harian, screener akumulasi smart money, detail emiten, pergerakan broker whale, dan rotasi sektor) kini dapat diakses langsung via bot Telegram (`@IDXadryanBot`).
+  - Ditenagai oleh Google Gemini AI dengan pemanggilan tool nyata (*Function Calling*) ke backend FastAPI (`http://localhost:8001`) dan database PostgreSQL, multi-model failover otomatis, dan memori percakapan berlanjut (*multi-turn session*).
 
 ---
 
-## 🏛️ Arsitektur Sistem
+## 🏛️ Arsitektur Sistem & Ekosistem (Investowl × SMtracker)
 
+Investowl tidak berdiri sendiri, melainkan bertindak sebagai **Frontend Institusional & API Gateway** di atas mesin pipeline kuantitatif **SMtracker**:
+
+```mermaid
+flowchart TD
+    subgraph DataSources["🌐 Sumber Data Eksternal"]
+        IDX["Bursa Efek Indonesia (IDX)<br/>• Harga Saham & Indeks Komposit"]
+        SB["Stockbit Broker API<br/>• Broker Summary & Net Flow"]
+    end
+
+    subgraph SMtrackerCore["⚙️ SMtracker (Data Engineering Engine)"]
+        INGEST["Ingestion & Anti-Throttle Worker<br/>• Batching 100 emiten / worker<br/>• Anti-WAF Session Warming"]
+        AUDIT["Database 5-Pillar Health Auditor<br/>• Freshness, Coverage, Bloat"]
+        QUANT["Mesin Kuantitatif & Ekonometrika<br/>• Gaussian HMM Regimes<br/>• VAR Impulse Response (IRF)<br/>• Wyckoff Scanner & Smart Money Score"]
+        BOT_DAEMON["Telegram AI Daemon (investowl-bot.service)<br/>• Google Gemini Multi-Model Failover<br/>• Multi-Turn Conversation Memory<br/>• Bulk Monthly Auto-Fix"]
+    end
+
+    subgraph StorageLayer["💾 Shared Storage & Caching Layer"]
+        PG[("PostgreSQL Database (Local Port 5432)<br/>Tabel: prices, broker_flow, broker_activity,<br/>signals, analytics_daily_signals, users")]
+        REDIS[("Redis Server (Port 6379)<br/>Hot API Cache, Rate Limiting, TTL Store")]
+    end
+
+    subgraph InvestowlCore["🦉 The Investowl Platform"]
+        API["FastAPI Backend Microservice (Port 8001)<br/>• /api/v1/stocks & /api/bandar<br/>• /api/foreign-flow & /api/signal<br/>• /api/users/watchlist"]
+        NEXT["Next.js 16 Web Client (Port 3000)<br/>• React 19 + Turbopack + Tailwind v4<br/>• Material Design 3 (MD3) Expressive<br/>• Apache ECharts & Recharts<br/>• Google SSO + Watchlist Sync"]
+    end
+
+    subgraph Touchpoints["📱 Akses Pengguna"]
+        WEB_USER["Pengguna Web & Mobile PWA<br/>(https://investowl.cugarete.me)"]
+        TG_USER["Pengguna Telegram Bot<br/>(@IDXadryanBot)"]
+    end
+
+    %% Alur Data
+    IDX & SB --> INGEST
+    INGEST -->|Write Raw Data| PG
+    PG --> AUDIT & QUANT
+    QUANT -->|Save Processed Signals| PG
+    QUANT -.->|Clear Hot Cache| REDIS
+
+    %% Alur Investowl
+    PG -->|Read-Only Connection| API
+    REDIS <-->|Cache & Rate Limit| API
+    API -->|REST API JSON| NEXT
+    NEXT --> WEB_USER
+
+    %% Alur Telegram Bot
+    TG_USER <--> BOT_DAEMON
+    BOT_DAEMON <-->|Tool Calling / Queries| PG
+    BOT_DAEMON <-->|Tool Calling / API| API
+    BOT_DAEMON -->|Trigger Auto-Fix| INGEST
 ```
-┌────────────────────────────────────────────────────────┐
-│                   Next.js 16 Web Client                │
-│       React 19 · TypeScript · Tailwind CSS v4 · SWR     │
-│       MD3 Expressive Token · 11 Pre-rendered Routes    │
-└───────────────────────────┬────────────────────────────┘
-                            │ HTTP JSON (GZip) - Port 8001
-┌───────────────────────────▼────────────────────────────┐
-│                    FastAPI Backend                     │
-│               Python 3.10+ · Uvicorn · Pydantic         │
-├───────────────────────────┬────────────────────────────┤
-│ Routers (backend/routers):│ Core & Analytical Services:│
-│ - /api/v1/stocks          │ - services/bandarmology_   │
-│ - /api/v1/broker          │   service.py               │
-│ - /api/v1/auth            │ - services/foreign_        │
-│ - /api/bandar             │   analytics.py             │
-│ - /api/foreign-flow       │ - core/cache.py            │
-│ - /api/signal             │   (BoundedTTLCache LRU+TTL)│
-│ - /api/system             │ - idx_bandarmology engine  │
-└─────────────┬─────────────────────────────┬────────────┘
-              │                             │
-┌─────────────▼─────────────┐ ┌─────────────▼────────────┐
-│    PostgreSQL Database    │ │       Redis Server       │
-│  Tabel OHLCV, Broker Flow │ │ Rate Limiting, Temporary │
-│  & Master Universe IDX    │ │ Cache & In-Memory Store  │
-│      (READ-ONLY POOL)     │ │                          │
-└───────────────────────────┘ └──────────────────────────┘
-```
+
+### Bagaimana Kedua Aplikasi Bekerja Bersama:
+1. **Simbiosis Pipeline & Presentasi**:
+   - **SMtracker**: Mengurus *heavy-lifting data engineering* — ingestion data transaksi broker harian dan bulanan, pencegahan throttling WAF, kalkulasi model regresi HMM dan VAR, pemindaian Wyckoff harian, serta otomasi backup dan audit database.
+   - **Investowl**: Mengurus *institutional presentation & API delivery* — menyajikan data melalui FastAPI berkecepatan tinggi dengan sub-millisecond in-memory caching, antarmuka visual Next.js 16 Material 3 Expressive, serta sistem watchlist berbasis cloud Google OAuth.
+2. **PostgreSQL Sebagai Penghubung Utama**:
+   - Kedua aplikasi berbagi basis data PostgreSQL yang sama (`bandarmology`). SMtracker menulis transaksi baru dan hasil kalkulasi sinyal, sedangkan Investowl membaca data tersebut secara efisien menggunakan connection pooling yang terisolasi.
+3. **Omnichannel Intelligence via Telegram**:
+   - Pengguna memiliki dua cara berinteraksi: antarmuka web visual grafis kaya fitur di desktop/tablet/ponsel via Investowl Web PWA, dan asisten bot interaktif Telegram untuk pemantauan cepat dan perbaikan mandiri sistem di lapangan.
 
 ---
 

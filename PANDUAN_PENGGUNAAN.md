@@ -13,7 +13,8 @@ Selamat datang di **Panduan Penggunaan Aplikasi Re-Tracker (The Investowl)**. Do
 6. [AI Multi-Layer Signal Scanner](#6-ai-multi-layer-signal-scanner)
 7. [Terminal Live System Logs](#7-terminal-live-system-logs)
 8. [Panel Administrasi (User Approval Gate)](#8-panel-administrasi-user-approval-gate)
-9. [Tips & Best Practices Penggunaan](#9-tips--best-practices-penggunaan)
+9. [Asisten Interaktif Telegram & Mobile Command Center](#9-asisten-interaktif-telegram--mobile-command-center)
+10. [Tips & Best Practices Penggunaan](#10-tips--best-practices-penggunaan)
 
 ---
 
@@ -214,7 +215,33 @@ Khusus untuk pengguna yang email-nya terdaftar di variabel lingkungan `ADMIN_EMA
 
 ---
 
-## 9. Tips & Best Practices Penggunaan
+## 9. Asisten Interaktif Telegram & Mobile Command Center
+
+Untuk kemudahan akses data kapan saja melalui perangkat ponsel, seluruh fitur Investowl terintegrasi langsung dengan asisten bot Telegram resmi (`@IDXadryanBot`):
+
+### Fitur Interaktif:
+1. **Analisis Saham & Bandarmologi Instan**:
+   - Ketik `/cek BBCA` untuk melihat harga penutupan terakhir, sinyal bandar (*Big Acc*, *Neutral*, *Dist*), skor Smart Money, dan net flow asing/lokal.
+2. **Top AI Signals Harian**:
+   - Ketik `/signals` untuk melihat 5 saham dengan potensi momentum Wyckoff tertinggi beserta estimasi *Win Rate* dari model pembelajaran mesin.
+3. **Smart Money Screener**:
+   - Ketik `/screener` untuk menyaring saham-saham yang sedang diakumulasi paling masif oleh broker institusional hari ini.
+4. **Whale Tracker**:
+   - Ketik `/whale ZP` (atau kode broker lain seperti `AK`, `BK`, `CC`, `YP`) untuk melihat saham apa saja yang sedang diborong atau dijual oleh broker bersangkutan.
+5. **Rotasi Sektor & Foreign Flow**:
+   - Ketik `/sektor` untuk melihat sektor mana yang memimpin pergerakan modal dan aliran dana asing di bursa IDX hari ini.
+6. **Diskusi Bahasa Alami Bebas (Powered by Google Gemini)**:
+   - Anda dapat bertanya apa pun secara santai dalam bahasa Indonesia, misalnya:
+     - *"Bagaimana kondisi akumulasi saham BBRI seminggu terakhir?"*
+     - *"Broker asing hari ini paling banyak keluar dari sektor apa?"*
+     - *"Tolong audit database bursa bulan 8 tahun 2026, apakah ada yang bolong?"*
+   - Dilengkapi **memori percakapan berlanjut** (*multi-turn*) dan *auto-failover* yang tangguh.
+7. **Perbaikan Mandiri Database (Bulk Auto-Fix)**:
+   - Ketik `/autofix 2026-08` atau perintahkan via chat: *"tolong autofix semua data yang bolong di bulan 8 tahun 2026"*. Sistem akan secara otomatis mengumpulkan seluruh tanggal yang tertinggal dan menarik ulang datanya secara berurutan.
+
+---
+
+## 10. Tips & Best Practices Penggunaan
 
 1. **Konfirmasi Sinyal Multi-Layer**:
    - Selalu cari emiten yang memiliki konvergensi positif antara **Smart Money Score > 60** dan **Technical Score > 60**. Kenaikan harga yang didukung akumulasi bandar memiliki probabilitas keberhasilan lebih tinggi dibanding breakout teknikal murni tanpa akumulasi volume.
