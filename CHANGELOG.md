@@ -4,6 +4,37 @@ Seluruh perubahan penting pada proyek **Re-Tracker (The Investowl)** didokumenta
 
 ---
 
+## [1.4.0] - 2026-10-05
+
+### ⚡ System Logs & Interactive Job Control Center, Concurrency Guard & History Picker
+
+Pembaruan besar pada fitur observabilitas sistem dan manajemen eksekusi job background, mengubah halaman log pasif menjadi Interactive Job Control Center yang memungkinkan pemicuan manual langsung dari browser, pemantauan status proses real-time, proteksi anti-tabrakan proses (*concurrency lock*), penjelajahan riwayat file log historis, dan penyelarasan urutan eksekusi pipeline harian.
+
+#### Ditambahkan (Added)
+- **Interactive Job Control Center (`frontend/app/logs/page.tsx`)**:
+  - Tombol aksi **"Jalankan Sekarang"** di setiap tab job (Backfill, Auditor, ETL Flow, Scanner, Full Pipeline).
+  - Modal konfigurasi parameter fleksibel (pemilihan Universe: `watchlist`, `idx80`, `all`; pemilihan Lookback Windows).
+  - Tombol penghentian aman **"Hentikan"** untuk membatalkan proses yang sedang berjalan (`SIGTERM`/`SIGKILL`) tanpa perlu SSH ke server.
+  - Indikator status badge dinamis: `IDLE / SIAP`, `RUNNING (PID, Durasi)` beranimasi pulse, `SUCCESS`, dan `FAILED`.
+  - Dropdown **Riwayat Log (History Picker)** untuk beralih antara log terkini (*Live*) dan file log tanggal-tanggal sebelumnya.
+  - Fitur terminal tambahan: *Auto-scroll lock toggle*, *Copy Log* satu klik, dan *Adaptive Polling* (cepat saat ada proses aktif, melambat saat idle).
+- **Backend Job Management Endpoints (`backend/routers/system.py`)**:
+  - `GET /api/logs/jobs/status`: Memeriksa status real-time seluruh tugas otomatisasi beserta PID dan durasi aktif (dilengkapi deteksi proses eksternal via `/proc`).
+  - `POST /api/logs/jobs/{job_name}/run`: Endpoint pemicu eksekusi subprocess di latar belakang dengan penulisan stdout/stderr ke file log.
+  - `POST /api/logs/jobs/{job_name}/stop`: Menghentikan proses background secara aman.
+  - `GET /api/logs/history`: Mengambil daftar file log historis berdasarkan nama job beserta ukuran file dan waktu modifikasi.
+  - `GET /api/logs/view`: Membaca isi file log spesifik dengan sanitasi keamanan path traversal.
+- **Proteksi Konkurensi & Collision Guard**:
+  - Sistem mengunci eksekusi job jika job yang sama atau Full Pipeline sedang berjalan, mencegah lonjakan CPU 100% dan tabrakan transaksi database.
+- **Penyelarasan Alur Kerja Visual**:
+  - Penomoran tab antarmuka diselaraskan persis dengan urutan pipeline harian: `1. Backfill -> 2. Auditor -> 3. ETL Flow -> 4. Scanner -> Full Pipeline`.
+
+#### Kualitas & Verifikasi
+- **Backend Test Suite**: 34/34 skenario karakterisasi backend lulus 100% (`34 passed in 16.99s`).
+- **Frontend Build**: Sukses terkompilasi melalui Next.js Turbopack (`npm run build`) dengan 14 rute teroptimasi.
+
+---
+
 ## [1.3.0] - 2026-09-29
 
 ### 🎨 Material Design 3 Expressive Pastel, Guest Mode, Cloud Watchlist Sync, Peta Jejaring Interaktif & PWA
