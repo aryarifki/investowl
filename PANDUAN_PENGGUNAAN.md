@@ -191,16 +191,33 @@ Di bagian atas tabel hasil scanner, Anda dapat mengaktifkan atau mematikan filte
 
 ---
 
-## 7. Terminal Live System Logs (`/logs`)
+## 7. Terminal Live System Logs & Interactive Job Runner (`/logs`)
 
-Antarmuka pemantau log aplikasi secara real-time yang menyerupai emulator terminal Linux:
-- **Pilihan Kategori Log**:
-  - `General Log`: Catatan request HTTP API dan respons sistem.
-  - `Bandarmology Worker`: Riwayat kalkulasi dan matching transaksi broker.
-  - `Ingestion Task`: Status scraping data harian dari bursa.
-  - `System Errors`: Log galat runtime dan warning exception.
-- **Tombol Syncing**:
-  - Klik tombol **Syncing / Refresh** di pojok kanan atas untuk memperbarui log secara instan tanpa me-reload halaman.
+Pusat kendali eksekusi dan pemantau log otomatisasi data pasar SMtracker yang terintegrasi langsung di InvestOwl:
+
+### A. 9 Pekerjaan Otomasi (Job Suite)
+1. **Daily Backfill**: Penarikan data transaksi bursa dan broker harian (IDX + Stockbit).
+2. **DB Health Audit**: Audit integritas database, deteksi anomali data, vacuum dead tuples, dan notifikasi ke Telegram.
+3. **ETL Foreign Flow**: Komputasi analitik arus dana asing (HMM regime, VAR, Network Graph).
+4. **Scanner AI**: Pemindaian momentum saham Wyckoff & akumulasi Smart Money harian.
+5. **Auditor Telegram**: Evaluasi sinyal aktif (`OPEN`), penutupan posisi `WIN`/`LOSS`/`EXP`, dan pengiriman digest harian ke Telegram.
+6. **Full Pipeline**: Menjalankan seluruh tahapan pipeline harian pasca-market secara berurutan (`run_daily.sh`).
+7. **Monthly Backfill**: Penarikan historis bulanan secara sekuensial dan aman dari limit request.
+8. **Fundamentals & Governance**: Penarikan data Company Details, Direksi/Komisaris, Pemegang Saham, Rasio Keuangan (PER, PBV, ROE), dan Corporate Actions.
+9. **Database Backup**: Ekspor database PostgreSQL (`pg_dump`) dan sinkronisasi ke Google Drive.
+
+### B. Tombol Aksi & Kontrol Interaktif
+- **Jalankan Sekarang**:
+  - Memicu eksekusi proses di latar belakang.
+  - Untuk tugas yang mendukung flag (Backfill, Fundamentals, ETL, DB Audit), sistem menampilkan **Modal Parameter Dinamis** (pemilihan Universe, Checklist Komponen Fundamental, Dropdown Tahun/Kuartal, Rentang Bulan, atau Mode Aman *Alert-Only*).
+- **Hentikan**:
+  - Membatalkan proses latar belakang yang sedang aktif secara aman (`SIGTERM`) tanpa perlu SSH ke server.
+- **Hapus Log**:
+  - Tombol tempat sampah di bilah alat terminal untuk menghapus file log yang sedang ditampilkan atau membersihkan seluruh file log pekerjaan terpilih.
+- **Auto-scroll & Salin Log**:
+  - Mengunci pengguliran otomatis ke baris log terbawah (*live streaming*) dan menyalin seluruh isi log ke papan klip (*clipboard*) dalam 1 klik.
+- **Riwayat Log (History Picker)**:
+  - Beralih antara tampilan live (*Log Terkini*) dan berkas log historis dari tanggal-tanggal sebelumnya.
 
 ---
 

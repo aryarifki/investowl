@@ -10,12 +10,22 @@ const fetcher = (url: string) =>
     return res.json();
   });
 
-type JobKey = "scanner" | "auditor" | "backfill" | "etl_flow" | "pipeline";
+type JobKey =
+  | "backfill"
+  | "db_audit"
+  | "etl_flow"
+  | "scanner"
+  | "auditor"
+  | "pipeline"
+  | "backfill_monthly"
+  | "backfill_fundamentals"
+  | "backup";
 
 interface JobStatus {
   key: JobKey;
   label: string;
   description: string;
+  category?: "daily" | "maintenance" | "pipeline";
   status: "idle" | "running" | "success" | "failed" | "stopped";
   pid?: number | null;
   started_at?: string | null;
@@ -25,6 +35,7 @@ interface JobStatus {
   last_log_file?: string | null;
   supports_universe?: boolean;
   supports_window?: boolean;
+  params?: string[];
 }
 
 interface LogFileInfo {
@@ -44,17 +55,39 @@ export default function LogsPage() {
 
   // Form options untuk parameter job
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
-  const [universe, setUniverse] = useState<string>("watchlist");
+  const [universe, setUniverse] = useState<string>("all");
   const [windowPreset, setWindowPreset] = useState<string>("standard");
+  const [days, setDays] = useState<number>(1);
+  const [force, setForce] = useState<boolean>(false);
+  const [months, setMonths] = useState<string>("last3");
+  const [statusOnly, setStatusOnly] = useState<boolean>(false);
+
+  // Fundamental & Governance options
+  const [fundDetails, setFundDetails] = useState<boolean>(true);
+  const [fundOnlyMissing, setFundOnlyMissing] = useState<boolean>(true);
+  const [fundRatios, setFundRatios] = useState<boolean>(false);
+  const [fundActions, setFundActions] = useState<boolean>(false);
+  const [fundYear, setFundYear] = useState<number>(new Date().getFullYear());
+  const [fundQuarter, setFundQuarter] = useState<number>(4);
+
+  // DB Health Audit options
+  const [dbAutofix, setDbAutofix] = useState<boolean>(true);
+  const [dbVacuum, setDbVacuum] = useState<boolean>(true);
+  const [dbNotify, setDbNotify] = useState<boolean>(true);
+  const [dbAlertOnly, setDbAlertOnly] = useState<boolean>(false);
 
   const terminalRef = useRef<HTMLDivElement>(null);
 
   const tabs = [
-    { key: "backfill", label: "1. Backfill", icon: "ph:download-simple-duotone" },
-    { key: "auditor", label: "2. Auditor", icon: "ph:robot-duotone" },
-    { key: "etl_flow", label: "3. ETL Flow", icon: "ph:graph-duotone" },
-    { key: "scanner", label: "4. Scanner", icon: "ph:lightning-duotone" },
-    { key: "pipeline", label: "Full Pipeline", icon: "ph:stack-duotone" },
+    { key: "backfill", label: "Daily Backfill", icon: "ph:download-simple-duotone", badge: "Harian" },
+    { key: "db_audit", label: "DB Health Audit", icon: "ph:shield-check-duotone", badge: "Harian" },
+    { key: "etl_flow", label: "ETL Foreign Flow", icon: "ph:graph-duotone", badge: "Harian" },
+    { key: "scanner", label: "Scanner AI", icon: "ph:lightning-duotone", badge: "Harian" },
+    { key: "auditor", label: "Auditor Telegram", icon: "ph:robot-duotone", badge: "Harian" },
+    { key: "pipeline", label: "Full Pipeline", icon: "ph:stack-duotone", badge: "Otomatis" },
+    { key: "backfill_monthly", label: "Monthly Backfill", icon: "ph:calendar-duotone", badge: "Periodik" },
+    { key: "backfill_fundamentals", label: "Fundamentals & Governance", icon: "ph:buildings-duotone", badge: "Periodik" },
+    { key: "backup", label: "Backup Database", icon: "ph:database-duotone", badge: "Maintenance" },
   ] as const;
 
   // 1. Polling status semua jobs (dinamis: lebih cepat jika ada yang running)
@@ -74,8 +107,8 @@ export default function LogsPage() {
   const isJobRunning = currentJobStatus?.status === "running";
 
   // 2. Mengambil riwayat file log untuk job yang sedang aktif
-  const { data: historyData } = useSWR<{ files: LogFileInfo[] }>(
-    `/api/logs/history?job=${activeTab === "pipeline" ? "cron_daily" : activeTab}`,
+  const { data: historyData, mutate: mutateHistory } = useSWR<{ files: LogFileInfo[] }>(
+    `/api/logs/history?job=${activeTab}`,
     fetcher,
     { refreshInterval: 15000, revalidateOnFocus: false }
   );
@@ -103,7 +136,7 @@ export default function LogsPage() {
   let currentLogContent = "Menunggu data log...";
   if (selectedFile === "latest") {
     if (activeTab === "pipeline") {
-      currentLogContent = logData?.content || "Belum ada log untuk cron_daily.log.";
+      currentLogContent = logData?.content || logData?.logs?.pipeline || "Belum ada log untuk pipeline.";
     } else {
       currentLogContent = logData?.logs?.[activeTab] || "Belum ada log untuk job ini.";
     }
@@ -124,17 +157,45 @@ export default function LogsPage() {
     setActionError(null);
   }, [activeTab]);
 
+  // Cek apakah job memerlukan konfigurasi modal
+  const needsConfigModal = [
+    "backfill",
+    "backfill_monthly",
+    "etl_flow",
+    "backfill_fundamentals",
+    "db_audit",
+  ].includes(activeTab);
+
   // Handler Trigger Job
   const handleTriggerJob = async () => {
     setIsSubmitting(true);
     setActionError(null);
     try {
       const payload: Record<string, any> = {};
-      if (currentJobStatus?.supports_universe) {
+      if (activeTab === "backfill") {
         payload.universe = universe;
-      }
-      if (currentJobStatus?.supports_window) {
+        payload.days = days;
+        payload.force = force;
+      } else if (activeTab === "backfill_monthly") {
+        payload.universe = universe;
+        payload.months = months;
+        payload.force = force;
+        payload.status_only = statusOnly;
+      } else if (activeTab === "etl_flow") {
+        payload.universe = universe;
         payload.windows = windowPreset === "full" ? [20, 30, 60, 90, 180] : [20, 60];
+      } else if (activeTab === "backfill_fundamentals") {
+        payload.details = fundDetails;
+        payload.only_missing = fundOnlyMissing;
+        payload.ratios = fundRatios;
+        payload.actions = fundActions;
+        payload.year = fundYear;
+        payload.quarter = fundQuarter;
+      } else if (activeTab === "db_audit") {
+        payload.alert_only = dbAlertOnly;
+        payload.autofix = dbAutofix;
+        payload.vacuum = dbVacuum;
+        payload.notify = dbNotify;
       }
 
       const res = await fetch(`/api/logs/jobs/${activeTab}/run`, {
@@ -150,7 +211,6 @@ export default function LogsPage() {
 
       setShowConfigModal(false);
       setSelectedFile("latest");
-      // Refresh status dan log segera
       mutateStatus();
       setTimeout(() => mutateLog(), 1000);
     } catch (err: any) {
@@ -185,6 +245,38 @@ export default function LogsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const [isClearing, setIsClearing] = useState<boolean>(false);
+
+  // Handler Hapus / Bersihkan Log
+  const handleClearLog = async () => {
+    const isSpecific = selectedFile !== "latest";
+    const confirmMsg = isSpecific
+      ? `Hapus file log ${selectedFile}?`
+      : `Bersihkan seluruh file log untuk pekerjaan ${currentJobStatus?.label || activeTab}?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setIsClearing(true);
+    setActionError(null);
+    try {
+      const url = isSpecific
+        ? `/api/logs/clear?filename=${encodeURIComponent(selectedFile)}`
+        : `/api/logs/clear?job=${activeTab}`;
+
+      const res = await fetch(url, { method: "DELETE" });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.detail || "Gagal menghapus log.");
+
+      setSelectedFile("latest");
+      mutateHistory();
+      mutateLog();
+    } catch (err: any) {
+      setActionError(err.message || "Gagal menghapus log.");
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4 pb-24 animate-fade-in max-w-7xl mx-auto">
       {/* ── HEADER & OVERVIEW ── */}
@@ -195,16 +287,15 @@ export default function LogsPage() {
               <Icon icon="ph:terminal-window-duotone" width="20" />
             </div>
             <h1 className="text-xl md:text-2xl font-black text-[var(--md-sys-color-on-surface)] tracking-tight">
-              SYSTEM LOGS & JOB RUNNER
+              SMTRACKER RUNNER & SYSTEM LOGS
             </h1>
           </div>
           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
-            Pusat pemantauan log cronjob dan kontrol eksekusi analitik data pasar SMtracker.
+            Pusat pemantauan log pipeline dan kontrol eksekusi analitik data pasar SMtracker langsung dari InvestOwl.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Tombol Sinkronisasi Manual */}
           <button
             onClick={() => {
               mutateStatus();
@@ -236,7 +327,7 @@ export default function LogsPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold border transition-all active:scale-[0.98] shadow-sm ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold border transition-all active:scale-[0.98] shadow-xs ${
                 isActive
                   ? "bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border-[var(--md-sys-color-primary)]"
                   : "bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)]"
@@ -244,6 +335,11 @@ export default function LogsPage() {
             >
               <Icon icon={tab.icon} width="16" />
               <span>{tab.label}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                isActive ? "bg-[var(--md-sys-color-primary)] text-white" : "bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)]"
+              }`}>
+                {tab.badge}
+              </span>
               {isRunning && (
                 <span className="flex h-2 w-2 relative ml-0.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
@@ -256,7 +352,7 @@ export default function LogsPage() {
       </div>
 
       {/* ── ACTION & STATUS BAR ── */}
-      <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Info Job & Status Badge */}
         <div className="space-y-1">
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -326,14 +422,14 @@ export default function LogsPage() {
           ) : (
             <button
               onClick={() => {
-                if (currentJobStatus?.supports_universe || currentJobStatus?.supports_window) {
+                if (needsConfigModal) {
                   setShowConfigModal(true);
                 } else {
                   handleTriggerJob();
                 }
               }}
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--md-sys-color-primary)] hover:opacity-90 text-[var(--md-sys-color-on-primary)] rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--md-sys-color-primary)] hover:opacity-90 text-[var(--md-sys-color-on-primary)] rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
             >
               <Icon icon="ph:play-bold" width="13" />
               <span>Jalankan Sekarang</span>
@@ -355,7 +451,7 @@ export default function LogsPage() {
         </div>
       )}
 
-      {/* ── MODAL KONFIGURASI PARAMETER (Untuk job yang mendukung flag) ── */}
+      {/* ── MODAL KONFIGURASI PARAMETER (Konteks sesuai Tab) ── */}
       {showConfigModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl p-5 max-w-md w-full space-y-4 shadow-xl">
@@ -374,8 +470,9 @@ export default function LogsPage() {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              {currentJobStatus?.supports_universe && (
+            <div className="space-y-3.5 text-xs">
+              {/* OPSI UNIVERSE (UNTUK BACKFILL / ETL) */}
+              {["backfill", "backfill_monthly", "etl_flow"].includes(activeTab) && (
                 <div>
                   <label className="block font-semibold text-[var(--md-sys-color-on-surface)] mb-1.5">
                     Universe Saham:
@@ -403,7 +500,65 @@ export default function LogsPage() {
                 </div>
               )}
 
-              {currentJobStatus?.supports_window && (
+              {/* OPSI DAILY BACKFILL */}
+              {activeTab === "backfill" && (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                      Jumlah Hari Kebelakang:
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={days}
+                      onChange={(e) => setDays(Number(e.target.value))}
+                      className="w-full px-3 py-1.5 bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] rounded-lg text-xs"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer font-medium text-[var(--md-sys-color-on-surface)]">
+                    <input
+                      type="checkbox"
+                      checked={force}
+                      onChange={(e) => setForce(e.target.checked)}
+                      className="rounded"
+                    />
+                    <span>Paksa Ambil Ulang Data Walau Sudah Ada (--force)</span>
+                  </label>
+                </div>
+              )}
+
+              {/* OPSI MONTHLY BACKFILL */}
+              {activeTab === "backfill_monthly" && (
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="block font-semibold text-[var(--md-sys-color-on-surface)] mb-1">
+                      Rentang Bulan:
+                    </label>
+                    <select
+                      value={months}
+                      onChange={(e) => setMonths(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] rounded-lg text-xs"
+                    >
+                      <option value="last3">3 Bulan Terakhir (last3)</option>
+                      <option value="last6">6 Bulan Terakhir (last6)</option>
+                      <option value="all">12 Bulan Terakhir (all)</option>
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer font-medium text-[var(--md-sys-color-on-surface)]">
+                    <input
+                      type="checkbox"
+                      checked={statusOnly}
+                      onChange={(e) => setStatusOnly(e.target.checked)}
+                      className="rounded"
+                    />
+                    <span>Hanya Cek Tanggal Terkini di Database (--status, Read-Only)</span>
+                  </label>
+                </div>
+              )}
+
+              {/* OPSI ETL FLOW */}
+              {activeTab === "etl_flow" && (
                 <div>
                   <label className="block font-semibold text-[var(--md-sys-color-on-surface)] mb-1.5">
                     Lookback Windows:
@@ -430,8 +585,130 @@ export default function LogsPage() {
                 </div>
               )}
 
+              {/* OPSI BACKFILL FUNDAMENTALS */}
+              {activeTab === "backfill_fundamentals" && (
+                <div className="space-y-2.5">
+                  <label className="block font-semibold text-[var(--md-sys-color-on-surface)]">
+                    Komponen Data yang Ditarik:
+                  </label>
+                  <div className="space-y-1.5 bg-[var(--md-sys-color-surface)] p-2.5 rounded-lg border border-[var(--md-sys-color-outline-variant)]">
+                    <label className="flex items-center gap-2 cursor-pointer font-medium">
+                      <input
+                        type="checkbox"
+                        checked={fundDetails}
+                        onChange={(e) => setFundDetails(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Company Details & Governance (--details)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium">
+                      <input
+                        type="checkbox"
+                        checked={fundOnlyMissing}
+                        onChange={(e) => setFundOnlyMissing(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Hanya Emiten Baru yang Belum Ada (--only-missing)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium">
+                      <input
+                        type="checkbox"
+                        checked={fundActions}
+                        onChange={(e) => setFundActions(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Corporate Actions (--actions)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium">
+                      <input
+                        type="checkbox"
+                        checked={fundRatios}
+                        onChange={(e) => setFundRatios(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Financial Ratios (--ratios)</span>
+                    </label>
+                  </div>
+
+                  {fundRatios && (
+                    <div className="grid grid-cols-2 gap-2 bg-[var(--md-sys-color-surface)] p-2.5 rounded-lg border border-[var(--md-sys-color-outline-variant)]">
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1">Tahun Laporan:</label>
+                        <input
+                          type="number"
+                          min={2020}
+                          max={2030}
+                          value={fundYear}
+                          onChange={(e) => setFundYear(Number(e.target.value))}
+                          className="w-full px-2 py-1 bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1">Kuartal (Quarter):</label>
+                        <select
+                          value={fundQuarter}
+                          onChange={(e) => setFundQuarter(Number(e.target.value))}
+                          className="w-full px-2 py-1 bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] rounded text-xs"
+                        >
+                          <option value={1}>Q1</option>
+                          <option value={2}>Q2</option>
+                          <option value={3}>Q3</option>
+                          <option value={4}>Q4 (Full Year)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* OPSI DB HEALTH AUDIT */}
+              {activeTab === "db_audit" && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-sky-600 dark:text-sky-400">
+                    <input
+                      type="checkbox"
+                      checked={dbAlertOnly}
+                      onChange={(e) => setDbAlertOnly(e.target.checked)}
+                      className="rounded"
+                    />
+                    <span>Mode Aman: Alert Only (Read-Only Tanpa Perubahan)</span>
+                  </label>
+                  {!dbAlertOnly && (
+                    <div className="space-y-1.5 bg-[var(--md-sys-color-surface)] p-2.5 rounded-lg border border-[var(--md-sys-color-outline-variant)]">
+                      <label className="flex items-center gap-2 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={dbAutofix}
+                          onChange={(e) => setDbAutofix(e.target.checked)}
+                          className="rounded"
+                        />
+                        <span>Perbaiki Anomali Otomatis (--autofix)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={dbVacuum}
+                          onChange={(e) => setDbVacuum(e.target.checked)}
+                          className="rounded"
+                        />
+                        <span>Vacuum & Analyze Tabel (--vacuum)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={dbNotify}
+                          onChange={(e) => setDbNotify(e.target.checked)}
+                          className="rounded"
+                        />
+                        <span>Kirim Laporan ke Telegram (--notify)</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface)] p-2.5 rounded-lg border border-[var(--md-sys-color-outline-variant)]">
-                ℹ️ Skrip akan berjalan di latar belakang (background process) dan output-nya dicatat langsung ke file log.
+                ℹ️ Skrip akan berjalan di latar belakang (background process) dan output-nya dicatat langsung ke file log SMtracker.
               </p>
             </div>
 
@@ -447,7 +724,7 @@ export default function LogsPage() {
                 type="button"
                 onClick={handleTriggerJob}
                 disabled={isSubmitting}
-                className="px-4 py-1.5 rounded-lg bg-[var(--md-sys-color-primary)] hover:opacity-90 text-[var(--md-sys-color-on-primary)] text-xs font-bold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                className="px-4 py-1.5 rounded-lg bg-[var(--md-sys-color-primary)] hover:opacity-90 text-[var(--md-sys-color-on-primary)] text-xs font-bold shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {isSubmitting ? "Memulai..." : "Eksekusi Job"}
               </button>
@@ -457,7 +734,7 @@ export default function LogsPage() {
       )}
 
       {/* ── TERMINAL EMULATOR UI ── */}
-      <div className="bg-[var(--md-sys-color-surface-container-lowest)] dark:bg-black/50 border border-[var(--md-sys-color-outline-variant)] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-[var(--md-sys-color-surface-container-lowest)] dark:bg-black/50 border border-[var(--md-sys-color-outline-variant)] rounded-2xl overflow-hidden shadow-xs">
         {/* Terminal Title Bar */}
         <div className="flex items-center justify-between bg-[var(--md-sys-color-surface-container-high)] dark:bg-black/30 border-b border-[var(--md-sys-color-outline-variant)] px-4 py-2.5">
           <div className="flex items-center gap-3">
@@ -492,6 +769,21 @@ export default function LogsPage() {
             >
               <Icon icon={copied ? "ph:check-bold" : "ph:copy-bold"} width="13" className={copied ? "text-emerald-500" : ""} />
               <span className="hidden sm:inline">{copied ? "Disalin!" : "Salin Log"}</span>
+            </button>
+
+            {/* Clear log button */}
+            <button
+              onClick={handleClearLog}
+              disabled={isClearing}
+              className="flex items-center gap-1 text-[11px] font-medium text-rose-500/80 hover:text-rose-600 transition-colors disabled:opacity-50"
+              title="Hapus / bersihkan file log ini"
+            >
+              <Icon
+                icon={isClearing ? "ph:spinner-gap-duotone" : "ph:trash-bold"}
+                className={isClearing ? "animate-spin" : ""}
+                width="13"
+              />
+              <span className="hidden sm:inline">{isClearing ? "Menghapus..." : "Hapus Log"}</span>
             </button>
           </div>
         </div>

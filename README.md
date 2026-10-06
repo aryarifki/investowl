@@ -81,9 +81,9 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
 - **🛡️ Autentikasi & Keamanan Multi-Tier**:
   - Login aman menggunakan Google OAuth melalui NextAuth.js dengan integrasi token JWT terproteksi.
   - Rate limiting berbasis IP/endpoint menggunakan Redis terpusat.
-- **🖥️ System Logs & Interactive Job Control Center**:
-  - Pusat pemantauan log dan kontrol eksekusi job (`/logs`) dengan tampilan emulator terminal Linux.
-  - Dilengkapi tombol pemicu manual (*Run Now*), modal pemilihan universe & lookback windows, tombol pembatalan proses (*Stop Job*), badge status proses aktif beranimasi (`IDLE`, `RUNNING`, `SUCCESS`, `FAILED`), proteksi konkurensi (*concurrency lock*), dan dropdown riwayat file log historis.
+- **🖥️ System Logs & Interactive Job Control Center (`/logs`)**:
+  - Pusat pemantauan log dan kontrol eksekusi 9 job otomatisasi SMtracker (Daily Backfill, Monthly Backfill, DB Health Audit, ETL Flow, Scanner AI, Telegram Auditor, Fundamentals & Governance, Full Pipeline, Database Backup) dengan tampilan emulator terminal Linux.
+  - Dilengkapi tombol pemicu manual (*Run Now*), modal parameter dinamis kontekstual (Universe, Rentang Bulan, Komponen Fundamental, Tahun/Kuartal, Mode Aman Alert-Only), tombol pembatalan proses (*Stop Job*), tombol penghapusan file log (*Clear Log*), badge status proses aktif beranimasi (`IDLE`, `RUNNING`, `SUCCESS`, `FAILED`), proteksi konkurensi (*concurrency lock*), dan dropdown riwayat file log historis.
 - **🤖 Integrasi Telegram AI Assistant & Mobile Command Center**:
   - Seluruh fitur utama Investowl (sinyal harian, screener akumulasi smart money, detail emiten, pergerakan broker whale, dan rotasi sektor) kini dapat diakses langsung via bot Telegram (`@IDXadryanBot`).
   - Ditenagai oleh Google Gemini AI dengan pemanggilan tool nyata (*Function Calling*) ke backend FastAPI (`http://localhost:8001`) dan database PostgreSQL, multi-model failover otomatis, dan memori percakapan berlanjut (*multi-turn session*).

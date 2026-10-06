@@ -4,6 +4,47 @@ Seluruh perubahan penting pada proyek **Re-Tracker (The Investowl)** didokumenta
 
 ---
 
+## [1.5.0] - 2026-10-06
+
+### 🚀 Full SMtracker Runner Suite, Dynamic Parameter Modals & Log Management
+
+Pembaruan besar yang mengintegrasikan seluruh skrip eksekusi dan otomasi data SMtracker langsung ke dalam dasbor antarmuka InvestOwl (`/logs`), melengkapi kontrol parameter dinamis per jenis pekerjaan, mode simulasi aman (*dry-run*), serta tombol manajemen pembersihan file log secara langsung dari browser.
+
+#### Ditambahkan (Added)
+- **Integrasi 9 Skrip Otomasi SMtracker (`backend/routers/system.py` & `frontend/app/logs/page.tsx`)**:
+  - `Daily Backfill` (`backfill_daily.py`): Penarikan harian transaksi broker dan harga saham (IDX + Stockbit).
+  - `DB Health Audit` (`db_daily_audit.py`): Audit integritas data, deteksi bolong/anomali, vacuuming, dan notifikasi Telegram.
+  - `ETL Foreign Flow` (`etl_foreign_flow.py`): Komputasi multi-core analitik Foreign Flow (HMM, VAR, Network Graph).
+  - `Scanner AI` (`scanner.py`): Pemindaian momentum Wyckoff & Smart Money harian.
+  - `Auditor Telegram` (`auditor.py`): Evaluasi sinyal aktif, penutupan WIN/LOSS/EXP, dan pengiriman digest ke Telegram.
+  - `Full Pipeline` (`run_daily.sh`): Eksekusi berurutan seluruh rantai pipeline harian pasca-market (Tahap 1–7).
+  - `Monthly Backfill` (`backfill_monthly.py`): Penarikan historis bulanan dengan injeksi otomatis flag `-y` (non-interaktif anti-hang).
+  - `Fundamentals & Governance` (`backfill_fundamentals.py`): Penarikan data Company Details, Direksi, Rasio Finansial (PER, PBV, ROE), dan Corporate Actions.
+  - `Database Backup` (`auto_backup.sh`): Pencadangan PostgreSQL dump dan sinkronisasi cloud Google Drive.
+- **Modal Konfigurasi Dinamis & Kontekstual**:
+  - Parameter fleksibel yang menyesuaikan jenis tugas yang dipilih:
+    - *Fundamentals*: Checklist komponen (Governance, Ratios, Corporate Actions, Only Missing) dan input Tahun/Kuartal otomatis.
+    - *Monthly Backfill*: Pilihan universe saham dan rentang bulan (`last3`, `last6`, `all`).
+    - *DB Health Audit*: Pilihan Mode Aman (*Alert-Only Read-Only*) atau kombinasi Autofix, Vacuum & Telegram Notify.
+    - *Daily Backfill*: Pilihan universe saham, jumlah hari, dan toggle `--force`.
+    - *ETL Flow*: Pilihan universe dan preset lookback windows (`[20, 60]` vs `[20, 30, 60, 90, 180]`).
+- **Fitur Hapus Log / Clear Logs (`DELETE /api/logs/clear`)**:
+  - Tombol **"Hapus Log"** bersertifikasi konfirmasi pada bilah alat terminal emulator UI.
+  - Endpoint backend aman dengan proteksi *path traversal* untuk menghapus file log aktif, seluruh riwayat pekerjaan tertentu, maupun pembersihan total folder debug.
+- **Mode Simulasi Aman (*Dry-Run*)**:
+  - Dukungan parameter `dry_run: true` pada `JobRunRequest` untuk memvalidasi penyusunan sintaks CLI tanpa menyentuh atau memodifikasi database aktif.
+
+#### Diperbaiki (Fixed)
+- **Eliminasi Terminal Hang pada Skrip Interaktif**:
+  - `backfill_monthly.py` otomatis diberikan argumen `-y` saat dipicu dari web sehingga tidak macet menunggu penekanan tombol keyboard.
+  - `backfill_fundamentals.py` otomatis menyertakan argumen `--year` dan `--quarter` saat opsi rasio finansial dipilih sehingga tidak memicu prompt `input()` di terminal.
+
+#### Kualitas & Verifikasi
+- **Unit Test Suite**: 8/8 skenario pengujian endpoint, command builder, dan delete log lulus 100% (`test_system_jobs.py`).
+- **Frontend Turbopack Build**: Sukses terkompilasi tanpa galat TypeScript (`npm run build`).
+
+---
+
 ## [1.4.0] - 2026-10-05
 
 ### ⚡ System Logs & Interactive Job Control Center, Concurrency Guard & History Picker
