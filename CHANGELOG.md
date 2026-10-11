@@ -4,6 +4,41 @@ Seluruh perubahan penting pada proyek **Re-Tracker (The Investowl)** didokumenta
 
 ---
 
+## [1.6.0] - 2026-10-11
+
+### 🚀 Quantitative Engine v1.4 Synchronization, Instant Cache Invalidation & Rich Signal UI
+
+Pembaruan strategis yang menyinkronkan backend FastAPI dan antarmuka Next.js dengan perombakan mesin kuantitatif SMtracker v1.4, mencakup integrasi nama tahapan Wyckoff, persistensi aliran dana Smart Money 5-hari, tag rotasi multi-faktor sektor, rasio Risk-to-Reward dinamis, perbaikan normalisasi probabilitas model ML, serta sistem webhook invalidasi cache instan.
+
+#### Ditambahkan (Added)
+- **Endpoint Webhook Cache Invalidation (`backend/routers/signal.py`)**:
+  - `POST /api/signal/refresh`: Membersihkan seluruh kunci cache berseri `signal:*` secara instan seketika proses scan harian selesai tanpa perlu menunggu kedaluwarsa TTL.
+- **Eksposur Atribut Kuantitatif Lanjutan (`backend/routers/signal.py`)**:
+  - Menyediakan `wyckoff_name` (*Markup*, *Spring ⭐*, *Selling Climax*, *Sign of Strength*, *Building Cause*), `smart_money_notes`, `sector_notes`, `persistence_5d`, `turnover_idr`, dan `rr_ratio` dinamis pada endpoint `/api/signal/daily`, `/api/signal/active`, dan `/api/signal/backtest/history`.
+- **Penyempurnaan Visual Antarmuka Sinyal (`frontend/components/signal/DailyAlgoSignalsTab.tsx`)**:
+  - **Kartu Actionable Setups (Open Position)**:
+    - Chip status fase Wyckoff informatif yang menyertakan nama tahapan (contoh: `Phase E · Markup`, `Phase C · Spring ⭐`).
+    - Badge konsistensi akumulasi Smart Money 5-hari (`🟢 80% 5D Flow`, `🔴 40% 5D Flow`, `⚪ 50% 5D Flow`).
+    - Chip catatan sentimen dan rotasi sektoral emiten.
+    - Menampilkan ringkasan catatan aksi Smart Money (contoh: `⚡ SM: Bandar Akumulasi · Asing Buy 58.2%`).
+  - **Tabel Daily Algorithmic Market Ranking**:
+    - Filter fase Wyckoff yang lebih lengkap mencakup `ALL`, `A`, `B`, `C`, `D`, `E`, dan `UNKNOWN`.
+    - Kolom **Wyckoff** dengan label fase utama dan sub-label nama fase.
+    - Kolom **Smart Money** dengan nilai skor dan persentase persistensi aliran dana 5-hari.
+    - Kolom **Sector** dengan nilai skor dan tag status sektoral emiten.
+
+#### Diperbaiki (Fixed)
+- **Bug Normalisasi Nilai ML Win Probability (`ml_win_prob`)**:
+  - Memperbaiki bug visual di antarmuka frontend yang sebelumnya menampilkan probabilitas kemenangan sebesar `7700.0%` akibat perbedaan skala (0..100 vs 0..1). Backend kini secara otomatis menormalisasi nilai ke skala desimal `0.0 .. 1.0` (ditampilkan akurat sebagai `77.0%`), dengan guardrail proteksi ganda pada frontend.
+- **Pemendekan Cache TTL**:
+  - Mengurangi cache TTL pada endpoint `/api/signal/daily`, `/api/signal/active`, dan `/api/signal/backtest/history` dari 3600 detik (1 jam) menjadi 300 detik (5 menit) guna menjamin kesegaran data sinyal.
+
+#### Kualitas & Verifikasi
+- **Frontend Turbopack Build**: Lulus kompilasi Next.js 16.3.3 tanpa galat tipe TypeScript (`0 errors`).
+- **Uji Integrasi Endpoint**: Endpoint `/api/signal/refresh`, `/api/signal/daily`, `/api/signal/active`, dan `/api/signal/backtest/history` terverifikasi merespon status `200 OK` dengan payload data kuantitatif lengkap.
+
+---
+
 ## [1.5.0] - 2026-10-06
 
 ### 🚀 Full SMtracker Runner Suite, Dynamic Parameter Modals & Log Management

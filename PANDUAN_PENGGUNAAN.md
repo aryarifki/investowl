@@ -167,27 +167,44 @@ Model matematika kuantitatif tingkat lanjut untuk membedah transaksi dana asing:
 
 ---
 
-## 6. AI Multi-Layer Signal Scanner (`/signal`)
+## 6. AI Multi-Layer Signal Scanner v1.4 (`/signal`)
 
-Modul pemindai sinyal saham berbasis kuantitatif multi-layer adaptif:
+Modul pemindai sinyal kuantitatif dan rekomendasi posisi berbasis siklus pasar Wyckoff, Minervini VCP, serta rotasi multi-faktor sektor dan aliran dana Smart Money:
 
-### A. Bobot & Lapisan Penilaian (Composite Score 0 – 100)
+### A. Bobot & Lapisan Penilaian Kuantitatif (Composite Score 0 – 100)
 1. **Technical Layer (Skor 0 - 100)**:
-   - Menilai breakout resistance, posisi Moving Average (MA20, MA50, MA200), tren MACD, dan Stochastic/RSI.
+   - Dihitung menggunakan standar **Wilder's Smoothing RSI (14)** dan **Wilder's ATR (14)** untuk mengeliminasi lag rolling SMA.
+   - Menggunakan **Safe-CLV Chaikin Money Flow (CMF 14)** yang tahan terhadap bar datar/suspend ($HL=0$).
+   - Konfirmasi posisi harga terhadap Moving Average (MA20, MA50, MA150, MA200).
 2. **Smart Money Layer (Skor 0 - 100)**:
-   - Menilai rasio akumulasi broker top-3, konsistensi inflow bandar dalam 5–20 hari terakhir, dan ketiadaan distribusi terselubung.
+   - Menilai rasio partisipasi akumulasi bandar Top-3 broker terhadap volume total.
+   - **5-Day Flow Persistence (`persistence_5d`)**: Mengukur konsistensi akumulasi net buy asing dan broker bandar dalam 5 hari bursa berturut-turut.
+   - **Signed Foreign Z-Score**: Deviasi anomali volume aliran dana asing bertanda.
 3. **Sector Layer (Skor 0 - 100)**:
-   - Menilai kekuatan relatif emiten terhadap indeks sektoralnya (*Relative Strength*).
-4. **Fundamental Layer (Skor 0 - 100)**:
-   - Skrining rasio solvabilitas, pertumbuhan laba bersih, dan metrik valuasi (memberikan penalti skor jika rasio utang bermasalah).
+   - Evaluasi multi-faktor: 40% Posisi tren terhadap MA50 sektoral + 30% Relative Strength (RS) terhadap IHSG + 30% Akselerasi momentum 5-hari.
+4. **Wyckoff Cycle & VCP Pattern**:
+   - Deteksi fase Wyckoff: `Phase E · Markup`, `Phase D · Sign of Strength`, `Phase C · Spring ⭐`, `Phase B · Building Cause`, `Phase A · Selling Climax`, atau `UNKNOWN`.
+   - Pola kontraksi volatilitas Mark Minervini (VCP Grade A+, A, B, C, atau NONE) pada saham Stage 2 uptrend.
+5. **Tiered Gating System (Pencegahan False Positive)**:
+   - **Hard Block**: Saham beku/suspend, volume ratio < 0.25, bid-ask spread > 3.5%, atau turnover < Rp 1,5 Miliar langsung dieliminasi.
+   - **Hard Cap 45**: Saham dalam tren penurunan parah (< MA50 & < MA200) dibatasi maksimal skor 45 sehingga tidak dapat menjadi sinyal BUY.
+   - **Soft Penalties**: Pengurangan skor akumulatif (-5 hingga -15, maks -30) untuk bearish divergence atau kondisi overbought RSI > 72.
 
-### B. Filter Layer Toggle Pills
-Di bagian atas tabel hasil scanner, Anda dapat mengaktifkan atau mematikan filter layer tertentu:
-- Klik tombol **Technical**, **Smart Money**, **Sector**, atau **Fundamental** untuk menyaring saham yang memenuhi kriteria minimum di layer bersangkutan.
+### B. Membaca Kartu Actionable Setups (Open Positions)
+Di bagian atas halaman, kartu interaktif menyajikan sinyal yang sedang aktif (*OPEN*):
+- **Entry, TP, dan SL**: Level harga masuk ideal, target Take Profit, dan batas risiko Stop Loss berbasis support dan ATR.
+- **Risk-to-Reward (R:R)**: Rasio keuntungan terhadap risiko dinamis (1.8x hingga 3.0x).
+- **Badge 5D Flow**:
+  - `🟢 >= 60% 5D Flow`: Aliran dana konsisten masuk dalam 5 hari terakhir.
+  - `🔴 <= 40% 5D Flow`: Dominasi aliran dana keluar/distribusi dalam 5 hari terakhir.
+  - `⚪ 50% 5D Flow`: Aliran dana netral.
+- **Chip Sektor**: Memberikan ringkasan status kesehatan sektor emiten (contoh: *Sektor Uptrend*, *Sektor Netral*).
 
-### C. Dynamic Threshold Rezim Pasar
-- Algoritma secara adaptif menyesuaikan batas kelolosan sinyal berdasarkan kondisi IHSG.
-- Saat pasar berada pada rezim koreksi/bearish, threshold otomatis dikalibrasi (misal: skor komposit minimal 37) untuk menyaring hanya emiten-emiten dengan ketahanan likuiditas terkuat.
+### C. Filter & Navigasi Tabel Daily Market Ranking
+- **Pencarian Ticker**: Ketik kode saham di kolom pencarian untuk memfilter secara instan.
+- **Filter Wyckoff Phase**: Tombol filter cepat untuk menyaring saham berdasarkan fase siklus pasar (`ALL`, `A`, `B`, `C`, `D`, `E`, dan `UNKNOWN`).
+- **Filter ML Label**: Menyaring berdasarkan hasil prediksi model pembelajaran mesin (`ALL`, `WIN`, `HOLD`, `LOSS`).
+- **ML Win Prob**: Probabilitas kemenangan yang terkalibrasi akurat pada skala persentase `0.0% – 100.0%`.
 
 ---
 

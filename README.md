@@ -293,16 +293,22 @@ Halaman khusus untuk memantau rotasi likuiditas dan aliran dana bandar pada 8 ko
 
 ---
 
-### 6. Multi-Layer AI Signal Scanner (`/signal`)
-- Menampilkan daftar emiten yang lolos kualifikasi algoritma deteksi sinyal.
-- **Lapisan Penilaian (Composite Score 0 - 100)**:
-  - *Technical*: Breakout level, Moving Average alignment, RSI/Stochastic momentum.
-  - *Smart Money*: Rasio akumulasi Top-3 broker vs total volume transaksi.
-  - *Sector*: Momentum sektor saham relatif terhadap indeks sektoral.
-  - *Fundamental*: Pertumbuhan laba, solvabilitas, dan valuasi (dengan penalti jika bermasalah).
-- **Layer Toggle Pills**:
-  - Filter interaktif untuk menyaring saham berdasarkan pemenuhan layer spesifik (misal: aktifkan hanya *Smart Money* dan *Technical*).
-- **Rezim Pasar Otomatis**: Ambang batas skor menyesuaikan kondisi pasar secara adaptif (*Dynamic BEAR Market Threshold*).
+### 6. Multi-Layer AI Signal Scanner v1.4 (`/signal`)
+- Menampilkan daftar emiten yang lolos kualifikasi algoritma kuantitatif mutakhir dari `scanner.py`.
+- **Lapisan Penilaian Kuantitatif (Composite Score 0 - 100)**:
+  - *Technical*: Indikator momentum berstandar Wilder's (RSI 14 & ATR 14), Chaikin Money Flow (CMF 14), dan konfirmasi tren MA.
+  - *Smart Money*: Rasio akumulasi Top-3 broker, persistensi aliran dana asing 5-hari (`persistence_5d`), dan Z-score anomali net flow bertanda.
+  - *Sector*: Evaluasi rotasi multi-faktor (40% Tren MA50 Sektoral + 30% RS terhadap IHSG + 30% Akselerasi 5-Hari).
+  - *Wyckoff Phase & Minervini VCP*: Pengenalan pola siklus Wyckoff (*Phase E · Markup*, *Phase C · Spring ⭐*) dan kontraksi volatilitas VCP (Grade A+, A, B, C).
+  - *Tiered Gating System*: Proteksi anti-gorengan Hard Block, pembatasan Hard Cap 45 untuk saham downtrend parah, dan soft penalties bertingkat.
+- **Tampilan Actionable Setups (Open Positions)**:
+  - Kartu rekomendasi posisi terbuka dengan level Entry, Target Profit (TP), Stop Loss (SL), dan rasio *Risk-to-Reward* dinamis (1.8x – 3.0x).
+  - Badge konsistensi aliran dana 5-hari (`🟢 80% 5D Flow`), tag sentimen sektoral, dan catatan ringkasan akumulasi Smart Money.
+- **Filter Cepat & Prediksi AI**:
+  - Filter fase siklus pasar lengkap (`ALL`, `A`, `B`, `C`, `D`, `E`, `UNKNOWN`) dan label Machine Learning (`WIN`, `HOLD`, `LOSS`).
+  - Probabilitas kemenangan AI terkalibrasi akurat (`ml_win_prob` 0.0% – 100.0%).
+- **Sinkronisasi Instan Webhook**:
+  - Endpoint `POST /api/signal/refresh` yang membersihkan cache backend secara otomatis seketika pipeline scan harian tuntas.
 
 ---
 
@@ -451,6 +457,9 @@ investowl/
 | `GET` | `/api/bandar/detail/{ticker}`| `bandarmology.py` | Analitik bandarmologi lengkap (Broker summary, Top-N). |
 | `GET` | `/api/broker-flow/whales` | `broker.py` | Daftar broker aktif dan klasifikasi taksonomi (Smart Foreign, Bandar, dsb). |
 | `GET` | `/api/broker-flow/whales/{code}` | `broker.py` | Akumulasi dan distribusi bersih broker spesifik beserta estimasi average price. |
+| `GET` | `/api/signal/daily` | `signal.py` | Mengambil daftar sinyal kuantitatif harian teratas beserta skor multi-faktor. |
+| `GET` | `/api/signal/active` | `signal.py` | Daftar posisi terbuka (OPEN) aktif lengkap dengan target TP/SL, R:R, dan Wyckoff phase. |
+| `POST`| `/api/signal/refresh` | `signal.py` | Invalidasi seluruh cache sinyal `signal:*` pasca-scan harian selesai. |
 | `GET` | `/api/signal/backtest/stats` | `signal.py` | Metrik agregasi akurasi dan win rate sinyal kuantitatif. |
 | `GET` | `/api/signal/backtest/history` | `signal.py` | Daftar riwayat sinyal terverifikasi dan diaudit (`WIN`/`LOSS`/`OPEN`). |
 | `GET` | `/api/system/logs/{type}` | `system.py` | Mengambil log sistem secara real-time. |
