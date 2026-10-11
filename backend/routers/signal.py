@@ -10,14 +10,20 @@ import pandas as pd
 from database import get_db
 from idx_bandarmology import storage, analysis
 from routers.bandarmology import get_dynamic_universe, _conviction_score
-from core.cache import cached, cache
+from core.cache import cached, cache, invalidate_cache
 
 router = APIRouter(prefix="/api/signal", tags=["AI Signals"])
 
+@router.post("/refresh")
+def refresh_signal_cache():
+    """Invalidasi seluruh cache sinyal agar sinkron instan dengan hasil scan terbaru."""
+    cleared = invalidate_cache("signal:*")
+    return {"status": "ok", "cleared_keys": cleared}
+
 @router.get("/daily")
-@cached(ttl_seconds=3600, prefix="signal")
+@cached(ttl_seconds=300, prefix="signal")
 def get_daily_signals(limit: int = 100, db: Session = Depends(get_db)):
-    """Mengambil Top AI Signals berdasarkan tanggal scan terbaru."""
+    """Mengambil Top AI Signals berdasarkan tanggal scan terbaru dengan metrik kuantitatif v1.4."""
     
     # 1. Cari tanggal scan terakhir yang ada di database
     date_query = text("SELECT MAX(date) FROM analytics_daily_signals")
@@ -44,11 +50,16 @@ def get_daily_signals(limit: int = 100, db: Session = Depends(get_db)):
     for r in rows:
         features = r.features_snapshot if isinstance(r.features_snapshot, dict) else json.loads(r.features_snapshot or "{}")
         
+        prob = float(r.ml_win_prob) if r.ml_win_prob is not None else 0.0
+        # Normalisasi ke skala 0..1 jika tersimpan dalam skala 0..100
+        if prob > 1.0:
+            prob = round(prob / 100.0, 4)
+
         signals.append({
             "ticker": r.ticker,
             "date": str(r.date),
             "ml_label": r.ml_label,
-            "ml_win_prob": float(r.ml_win_prob) if r.ml_win_prob else 0.0,
+            "ml_win_prob": prob,
             "composite_score": r.composite_score,
             "scores": {
                 "technical": r.technical_score,
@@ -57,6 +68,12 @@ def get_daily_signals(limit: int = 100, db: Session = Depends(get_db)):
                 "fundamental": r.fundamental_score
             },
             "features": features,
+            "wyckoff_phase": features.get("wyckoff_phase") or features.get("wp", "-"),
+            "wyckoff_name": features.get("wyckoff_name", ""),
+            "smart_money_notes": features.get("smart_money_notes", ""),
+            "sector_notes": features.get("sector_notes", ""),
+            "persistence_5d": float(features.get("persistence_5d", 0.5)),
+            "rr_ratio": float(features.get("rr_ratio")) if features.get("rr_ratio") is not None else None,
             "gate_notes": r.gate_notes if r.gate_notes else ""
         })
         
@@ -135,7 +152,7 @@ def get_backtest_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/backtest/history")
-@cached(ttl_seconds=1800, prefix="signal")
+@cached(ttl_seconds=300, prefix="signal")
 def get_backtest_history(
     status: str = "ALL",
     limit: int = 50,
@@ -170,13 +187,19 @@ def get_backtest_history(
     history = []
     for r in rows:
         feat = r.features_snapshot if isinstance(r.features_snapshot, dict) else json.loads(r.features_snapshot or "{}")
+        entry = float(r.entry_price) if r.entry_price is not None else 0.0
+        tp = float(r.tp_price) if r.tp_price is not None else 0.0
+        sl = float(r.sl_price) if r.sl_price is not None else 0.0
+        calculated_rr = round((tp - entry) / (entry - sl), 2) if (entry > sl and sl > 0) else None
+        rr_val = float(feat.get("rr_ratio")) if feat.get("rr_ratio") is not None else calculated_rr
+
         history.append({
             "id": r.id,
             "ticker": r.ticker,
             "signal_date": str(r.signal_date) if r.signal_date else None,
-            "entry_price": float(r.entry_price) if r.entry_price is not None else 0.0,
-            "tp_price": float(r.tp_price) if r.tp_price is not None else 0.0,
-            "sl_price": float(r.sl_price) if r.sl_price is not None else 0.0,
+            "entry_price": entry,
+            "tp_price": tp,
+            "sl_price": sl,
             "exit_price": float(r.exit_price) if r.exit_price is not None else None,
             "exit_date": str(r.exit_date) if r.exit_date else None,
             "status": r.status or "UNKNOWN",
@@ -185,6 +208,9 @@ def get_backtest_history(
             "composite_score": feat.get("composite_score", 0),
             "sm_score": feat.get("sm_score", 0),
             "sec_score": feat.get("sec_score", 0),
+            "wyckoff_phase": feat.get("wyckoff_phase") or feat.get("wp", "-"),
+            "wyckoff_name": feat.get("wyckoff_name", ""),
+            "rr_ratio": rr_val,
         })
 
     return {
@@ -195,7 +221,7 @@ def get_backtest_history(
 
 
 @router.get("/active")
-@cached(ttl_seconds=3600, prefix="signal")
+@cached(ttl_seconds=300, prefix="signal")
 def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
     """Mengambil daftar sinyal aktif (status = OPEN) diurutkan berdasarkan skor kuantitatif tertinggi."""
     q = text("""
@@ -225,9 +251,18 @@ def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
         sl = float(r.sl_price) if r.sl_price is not None else 0.0
         target_gain = round(((tp - entry) / entry) * 100.0, 2) if entry > 0 else 0.0
         stop_risk = round(((entry - sl) / entry) * 100.0, 2) if entry > 0 else 0.0
-        rr = round(target_gain / stop_risk, 2) if stop_risk > 0 else 0.0
+        calc_rr = round(target_gain / stop_risk, 2) if stop_risk > 0 else 0.0
+        rr = float(daily_feat.get("rr_ratio")) if daily_feat.get("rr_ratio") is not None else (float(feat.get("rr_ratio")) if feat.get("rr_ratio") is not None else calc_rr)
 
         comp_score = float(r.real_composite_score) if r.real_composite_score is not None else float(feat.get("composite_score", 0))
+
+        prob = daily_feat.get("ml_win_prob")
+        if prob is None:
+            prob = feat.get("ml_win_prob")
+        if prob is not None:
+            prob = float(prob)
+            if prob > 1.0:
+                prob = round(prob / 100.0, 4)
 
         data.append({
             "id": r.id,
@@ -245,6 +280,12 @@ def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):
             "days_held": r.days_held if r.days_held is not None else 0,
             "composite_score": int(round(comp_score)),
             "wyckoff_phase": daily_feat.get("wyckoff_phase") or feat.get("wp", "-"),
+            "wyckoff_name": daily_feat.get("wyckoff_name") or feat.get("wyckoff_name", ""),
+            "smart_money_notes": daily_feat.get("smart_money_notes") or feat.get("smart_money_notes", ""),
+            "sector_notes": daily_feat.get("sector_notes") or feat.get("sector_notes", ""),
+            "persistence_5d": float(daily_feat.get("persistence_5d", feat.get("persistence_5d", 0.5))),
+            "turnover_idr": float(daily_feat.get("turnover_idr", feat.get("turnover_idr", 0))),
+            "ml_win_prob": prob,
             "cmf": daily_feat.get("cmf") if daily_feat.get("cmf") is not None else feat.get("cmf_v"),
             "mfi": daily_feat.get("mfi") if daily_feat.get("mfi") is not None else feat.get("mfi_v"),
             "rsi": daily_feat.get("rsi") if daily_feat.get("rsi") is not None else feat.get("rsi_v"),

@@ -30,6 +30,12 @@ interface ActiveSignal {
   days_held: number;
   composite_score: number;
   wyckoff_phase: string;
+  wyckoff_name?: string;
+  smart_money_notes?: string;
+  sector_notes?: string;
+  persistence_5d?: number;
+  turnover_idr?: number;
+  ml_win_prob?: number;
   cmf: number | null;
   mfi: number | null;
   rsi: number | null;
@@ -52,6 +58,12 @@ interface DailySignalRow {
   };
   features: {
     wyckoff_phase?: string;
+    wyckoff_name?: string;
+    smart_money_notes?: string;
+    sector_notes?: string;
+    persistence_5d?: number;
+    turnover_idr?: number;
+    rr_ratio?: number;
     wp?: string;
     cmf_v?: number;
     mfi_v?: number;
@@ -59,6 +71,13 @@ interface DailySignalRow {
     vcp_grade?: string;
     [key: string]: any;
   };
+  wyckoff_phase?: string;
+  wyckoff_name?: string;
+  smart_money_notes?: string;
+  sector_notes?: string;
+  persistence_5d?: number;
+  turnover_idr?: number;
+  rr_ratio?: number;
   gate_notes: string;
 }
 
@@ -92,7 +111,7 @@ export default function DailyAlgoSignalsTab() {
       const matchSearch =
         !search ||
         (item.ticker && item.ticker.toUpperCase().includes(search.toUpperCase()));
-      const phase = item.features?.wyckoff_phase || item.features?.wp || "-";
+      const phase = (item.wyckoff_phase || item.features?.wyckoff_phase || item.features?.wp || "-").toUpperCase();
       const matchPhase = selectedPhase === "ALL" || phase === selectedPhase;
       const matchLabel = selectedMlLabel === "ALL" || item.ml_label === selectedMlLabel;
       const matchComposite = (item.composite_score ?? 0) >= minComposite;
@@ -106,6 +125,7 @@ export default function DailyAlgoSignalsTab() {
     if (p === "D") return "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
     if (p === "C") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
     if (p === "B") return "bg-blue-500/15 text-blue-400 border-blue-500/30";
+    if (p === "A") return "bg-rose-500/15 text-rose-400 border-rose-500/30";
     return "bg-neutral-500/15 text-neutral-400 border-neutral-500/30";
   };
 
@@ -161,16 +181,19 @@ export default function DailyAlgoSignalsTab() {
                   <div>
                     {/* Header Card */}
                     <div className="flex items-start justify-between gap-2 mb-2.5">
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Link
                             href={`/${item.ticker}`}
                             className="font-mono font-black text-lg text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors hover:underline"
                           >
                             {item.ticker}
                           </Link>
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${getWyckoffBadge(phase)}`}>
-                            Phase {phase}
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${getWyckoffBadge(phase)}`}
+                            title={item.wyckoff_name || undefined}
+                          >
+                            Phase {phase}{item.wyckoff_name ? ` · ${item.wyckoff_name}` : ""}
                           </span>
                           {item.vcp_grade && item.vcp_grade !== "NONE" && (
                             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 font-bold">
@@ -178,16 +201,48 @@ export default function DailyAlgoSignalsTab() {
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] line-clamp-1">
+                        <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] line-clamp-1 mt-0.5">
                           {item.company_name}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {item.persistence_5d !== undefined && (
+                            <span
+                              className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold ${
+                                item.persistence_5d >= 0.6
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  : item.persistence_5d <= 0.4
+                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                  : "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
+                              }`}
+                            >
+                              {item.persistence_5d >= 0.6 ? "🟢" : item.persistence_5d <= 0.4 ? "🔴" : "⚪"}{" "}
+                              {(item.persistence_5d * 100).toFixed(0)}% 5D Flow
+                            </span>
+                          )}
+                          {item.sector_notes && (
+                            <span
+                              className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] truncate max-w-[140px]"
+                              title={item.sector_notes}
+                            >
+                              {item.sector_notes}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Score</div>
                         <div className={`text-xs font-mono font-black px-2 py-0.5 rounded-md border ${getScoreBadge(item.composite_score)}`}>
                           {item.composite_score}
                         </div>
+                        {item.ml_win_prob !== undefined && (
+                          <div className="text-[9px] font-mono mt-0.5 text-[var(--md-sys-color-on-surface-variant)]">
+                            {(() => {
+                              const norm = item.ml_win_prob > 1.0 ? item.ml_win_prob / 100.0 : item.ml_win_prob;
+                              return `${(norm * 100).toFixed(0)}% Win`;
+                            })()}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -214,11 +269,17 @@ export default function DailyAlgoSignalsTab() {
                     </div>
 
                     {/* Features snapshot info */}
-                    <div className="flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-2 font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface-variant)] mb-1.5 font-mono">
                       <span>R:R: <strong className="text-[var(--md-sys-color-primary)] font-bold">{item.risk_reward_ratio}:1</strong></span>
                       {item.rsi !== null && <span>RSI: {Number(item.rsi).toFixed(1)}</span>}
                       {item.cmf !== null && <span>CMF: {Number(item.cmf).toFixed(2)}</span>}
                     </div>
+
+                    {item.smart_money_notes && (
+                      <div className="text-[10px] text-emerald-400/90 font-mono mb-1.5 truncate" title={item.smart_money_notes}>
+                        ⚡ <span className="opacity-80">SM:</span> {item.smart_money_notes}
+                      </div>
+                    )}
 
                     {item.gate_notes && (
                       <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface)]/60 px-2 py-1 rounded border border-[var(--md-sys-color-outline-variant)]/40 line-clamp-1">
@@ -279,13 +340,13 @@ export default function DailyAlgoSignalsTab() {
             </div>
 
             {/* Wyckoff Phase Selector */}
-            <div className="flex items-center gap-1 bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] p-1 rounded-xl text-xs font-semibold">
+            <div className="flex items-center gap-1 bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] p-1 rounded-xl text-xs font-semibold overflow-x-auto">
               <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] px-1.5 uppercase font-mono">Phase:</span>
-              {["ALL", "B", "C", "D", "E"].map((phase) => (
+              {["ALL", "A", "B", "C", "D", "E", "UNKNOWN"].map((phase) => (
                 <button
                   key={phase}
                   onClick={() => setSelectedPhase(phase)}
-                  className={`px-2 py-0.5 rounded-lg text-xs transition-all ${
+                  className={`px-2 py-0.5 rounded-lg text-xs transition-all whitespace-nowrap ${
                     selectedPhase === phase
                       ? "bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-2xs font-bold"
                       : "text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]"
@@ -349,8 +410,12 @@ export default function DailyAlgoSignalsTab() {
                 </tr>
               ) : (
                 filteredDaily.map((row, idx) => {
-                  const phase = row.features?.wyckoff_phase || row.features?.wp || "-";
+                  const phase = (row.wyckoff_phase || row.features?.wyckoff_phase || row.features?.wp || "-").toUpperCase();
+                  const wyckoffName = row.wyckoff_name || row.features?.wyckoff_name || "";
                   const vcp = row.features?.vcp_grade || "NONE";
+                  const p5d = row.persistence_5d ?? row.features?.persistence_5d;
+                  const secNotes = row.sector_notes || row.features?.sector_notes;
+
                   return (
                     <tr
                       key={row.ticker}
@@ -365,8 +430,14 @@ export default function DailyAlgoSignalsTab() {
                         </Link>
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${getWyckoffBadge(phase)}`}>
-                          {phase}
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold inline-block ${getWyckoffBadge(phase)}`}
+                          title={wyckoffName || undefined}
+                        >
+                          Phase {phase}
+                          {wyckoffName && (
+                            <span className="block text-[8px] opacity-85 font-normal tracking-tight">{wyckoffName}</span>
+                          )}
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold">
@@ -375,18 +446,38 @@ export default function DailyAlgoSignalsTab() {
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                        <span className={row.ml_win_prob >= 0.55 ? "text-emerald-400" : row.ml_win_prob >= 0.45 ? "text-amber-400" : "text-[var(--md-sys-color-on-surface-variant)]"}>
-                          {(row.ml_win_prob * 100).toFixed(1)}%
-                        </span>
+                        {(() => {
+                          const raw = row.ml_win_prob;
+                          if (raw === null || raw === undefined) {
+                            return <span className="text-[var(--md-sys-color-on-surface-variant)] opacity-50">-</span>;
+                          }
+                          const norm = raw > 1.0 ? raw / 100.0 : raw;
+                          const color = norm >= 0.55 ? "text-emerald-400" : norm >= 0.45 ? "text-amber-400" : "text-[var(--md-sys-color-on-surface-variant)]";
+                          return (
+                            <span className={color}>
+                              {(norm * 100).toFixed(1)}%
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[var(--md-sys-color-on-surface)]">
-                        {row.scores.smart_money}
+                        <div className="font-bold">{row.scores.smart_money}</div>
+                        {p5d !== undefined && p5d !== null && (
+                          <div className={`text-[9px] ${p5d >= 0.6 ? "text-emerald-400" : p5d <= 0.4 ? "text-rose-400" : "text-neutral-400"}`}>
+                            {(p5d * 100).toFixed(0)}% flow
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[var(--md-sys-color-on-surface)]">
                         {row.scores.technical}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[var(--md-sys-color-on-surface)]">
-                        {row.scores.sector}
+                        <div className="font-bold">{row.scores.sector}</div>
+                        {secNotes && (
+                          <div className="text-[8px] text-[var(--md-sys-color-on-surface-variant)] truncate max-w-[85px] ml-auto" title={secNotes}>
+                            {secNotes}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono">
                         {vcp !== "NONE" ? (
