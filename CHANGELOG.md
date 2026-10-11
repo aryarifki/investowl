@@ -4,6 +4,45 @@ Seluruh perubahan penting pada proyek **Re-Tracker (The Investowl)** didokumenta
 
 ---
 
+## [1.7.0] - 2026-10-11
+
+### 🚀 Quantitative Scanner v1.4.1 Refinements & AI Outcome Tracking Engine (Langkah B)
+
+Pembaruan strategis yang menyelaraskan backend FastAPI dengan mesin kuantitatif SMtracker v1.4.1 dan mengintegrasikan fondasi pelacakan kinerja sinyal trading multi-horizon (*AI Outcome Tracking Foundation*) guna menyediakan dataset pelatihan machine learning yang siap-pakai (institutional ML-ready dataset).
+
+#### Ditambahkan (Added)
+- **Endpoint Ringkasan Kinerja Outcome (`GET /api/signal/outcomes/summary`)**:
+  - Menyediakan metrik ringkasan komprehensif atas seluruh sinyal yang telah dievaluasi:
+    - Penghitungan status posisi (`win`, `loss`, `active`, `expired`).
+    - Imbal hasil rata-rata multi-horizon (*Forward Returns*): $T+1, T+3, T+5, T+10, T+20$ hari perdagangan bursa.
+    - Win-Rate acuan $T+5$ terukur (misal: 27.46% pada periode koreksi bursa).
+    - Metrik ekskursi harga ekstrim 20-hari: *Average Maximum Favorable Excursion* (MFE / `max_runup_pct` +7.30%) dan *Average Maximum Adverse Excursion* (MAE / `max_drawdown_pct` -9.48%).
+    - Rata-rata laba terealisasi (*Realized PnL*).
+- **Endpoint Ekspor Dataset Pembelajaran AI (`GET /api/signal/outcomes/export`)**:
+  - Menyediakan endpoint ekspor dataset terstruktur JSON untuk pelatihan model Machine Learning (XGBoost, LightGBM, Random Forest, atau Neural Networks).
+  - Dilengkapi parameter filter: `status` (`ALL`, `ACTIVE`, `WIN`, `LOSS`), `outcome` (`ALL`, `WIN`, `LOSS`, `NEUTRAL`), rentang tanggal `start_date` & `end_date`, `min_score`, serta paginasi aman `limit` dan `offset`.
+  - Menggabungkan label target evaluasi (`outcome_label`, forward returns, MFE, MAE, realized PnL, days held) berdampingan langsung dengan snapshot 20+ fitur kuantitatif mentah (`features`: skor teknikal, volume ratio, CMF, MFI, RSI, OBV, Wyckoff phase, VCP score, hard cap/penalties, dan market regime).
+- **Infrastruktur Tabel Database Terpusat (`signal_outcomes`)**:
+  - Tabel PostgreSQL baru dengan 14 kolom metrik performa sinyal, relasi kunci asing ke `signals`, serta indeks performa tinggi pada kolom `(signal_date)`, `(status)`, dan `(outcome_label)`.
+
+#### Diperbaiki & Diselaraskan (Changed & Refined)
+- **Penyelarasan Scanner v1.4.1**:
+  - Sinkronisasi filter data indeks sektoral minimum 50 bar data historis.
+  - Pemadatan jendela lookback Wyckoff Phase A dari 180 hari menjadi 75 hari bursa guna mencegah bias akumulasi lama.
+  - Penambahan penalti soft *Smart Money Bearish Divergence* (-12 poin) saat harga naik namun diiringi lonjakan distribusi broker bandar.
+  - Penambahan guardrail kualitas teknikal (`ts >= 55`) untuk alokasi bonus kapitalisasi pasar besar (*Big Cap Bonus*).
+  - Penerapan ambang batas kelulusan sinyal dinamis mengikuti rezim pasar IHSG (`BULL`: 60, `BEAR`: 70, `CRASH`: 75, `NORMAL`: 65).
+- **Otomasi Sinkronisasi Harian (`auditor.py`)**:
+  - Integrasi evaluasi otomatis outcomes sinyal 30 hari terakhir langsung ke dalam proses audit harian tanpa perlu eksekusi manual terpisah.
+
+#### Kualitas & Verifikasi
+- **Uji Integrasi Endpoint API**:
+  - `GET /api/signal/outcomes/summary` merespon HTTP 200 OK dengan ringkasan 541 sinyal tervalidasi.
+  - `GET /api/signal/outcomes/export?limit=3` merespon HTTP 200 OK dengan payload dataset fitur & label yang valid.
+- **Layanan Systemd**: `investowl-backend.service` berhasil direstart dan berjalan stabil (*active/running*).
+
+---
+
 ## [1.6.0] - 2026-10-11
 
 ### 🚀 Quantitative Engine v1.4 Synchronization, Instant Cache Invalidation & Rich Signal UI

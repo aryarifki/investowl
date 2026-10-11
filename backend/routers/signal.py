@@ -220,6 +220,116 @@ def get_backtest_history(
     }
 
 
+@router.get("/outcomes/summary")
+@cached(ttl_seconds=300, prefix="signal")
+def get_signal_outcomes_summary(db: Session = Depends(get_db)):
+    """Mengambil ringkasan metrik performa forward return multi-horizon untuk dataset AI."""
+    q = text("""
+        SELECT 
+            COUNT(*) as total_evaluated,
+            COUNT(CASE WHEN status = 'WIN' THEN 1 END) as count_win,
+            COUNT(CASE WHEN status = 'LOSS' THEN 1 END) as count_loss,
+            COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as count_active,
+            COUNT(CASE WHEN status = 'EXPIRED' THEN 1 END) as count_expired,
+            ROUND(AVG(return_1d)::numeric, 2) as avg_ret_1d,
+            ROUND(AVG(return_3d)::numeric, 2) as avg_ret_3d,
+            ROUND(AVG(return_5d)::numeric, 2) as avg_ret_5d,
+            ROUND(AVG(return_10d)::numeric, 2) as avg_ret_10d,
+            ROUND(AVG(return_20d)::numeric, 2) as avg_ret_20d,
+            ROUND(AVG(max_runup_20d)::numeric, 2) as avg_max_runup,
+            ROUND(AVG(max_drawdown_20d)::numeric, 2) as avg_max_drawdown,
+            ROUND(AVG(realized_pnl_pct)::numeric, 2) as avg_realized_pnl,
+            COUNT(CASE WHEN return_5d > 0 THEN 1 END) as win_5d_count,
+            COUNT(CASE WHEN return_5d IS NOT NULL THEN 1 END) as total_5d_count
+        FROM signal_outcomes
+    """)
+    row = db.execute(q).fetchone()
+    if not row:
+        return {"total_evaluated": 0}
+
+    tot_5d = row.total_5d_count or 0
+    win_5d = row.win_5d_count or 0
+    win_rate_5d = round((win_5d / tot_5d) * 100.0, 2) if tot_5d > 0 else 0.0
+
+    return {
+        "total_evaluated": row.total_evaluated or 0,
+        "counts": {
+            "win": row.count_win or 0,
+            "loss": row.count_loss or 0,
+            "active": row.count_active or 0,
+            "expired": row.count_expired or 0
+        },
+        "returns": {
+            "t1_pct": float(row.avg_ret_1d or 0.0),
+            "t3_pct": float(row.avg_ret_3d or 0.0),
+            "t5_pct": float(row.avg_ret_5d or 0.0),
+            "t10_pct": float(row.avg_ret_10d or 0.0),
+            "t20_pct": float(row.avg_ret_20d or 0.0),
+            "win_rate_5d": win_rate_5d
+        },
+        "excursion_20d": {
+            "max_runup_pct": float(row.avg_max_runup or 0.0),
+            "max_drawdown_pct": float(row.avg_max_drawdown or 0.0)
+        },
+        "realized": {
+            "avg_pnl_pct": float(row.avg_realized_pnl or 0.0)
+        }
+    }
+
+
+@router.get("/outcomes/export")
+def export_signal_outcomes_dataset(
+    limit: int = 1000,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Mengekspor dataset pembelajaran mesin (Fitur snapshot X + Label outcome Y) untuk pelatihan AI/XGBoost."""
+    q_str = """
+        SELECT 
+            id, ticker, signal_date, entry_price, tp_price, sl_price, target_rr,
+            return_1d, return_3d, return_5d, return_10d, return_20d,
+            max_runup_20d, max_drawdown_20d, hit_tp, hit_sl,
+            days_to_tp, days_to_sl, status, outcome_label,
+            realized_pnl_pct, days_held, features_snapshot
+        FROM signal_outcomes
+    """
+    params: dict[str, Any] = {"limit": limit}
+    if status and status.upper() != "ALL":
+        q_str += " WHERE status = :status_val"
+        params["status_val"] = status.upper()
+
+    q_str += " ORDER BY signal_date DESC, id ASC LIMIT :limit"
+
+    rows = db.execute(text(q_str), params).fetchall()
+    dataset = []
+    for r in rows:
+        feat = r.features_snapshot if isinstance(r.features_snapshot, dict) else (json.loads(r.features_snapshot) if r.features_snapshot else {})
+        dataset.append({
+            "id": r.id,
+            "ticker": r.ticker,
+            "signal_date": str(r.signal_date),
+            "entry_price": float(r.entry_price),
+            "target_rr": float(r.target_rr) if r.target_rr is not None else None,
+            "return_1d": float(r.return_1d) if r.return_1d is not None else None,
+            "return_3d": float(r.return_3d) if r.return_3d is not None else None,
+            "return_5d": float(r.return_5d) if r.return_5d is not None else None,
+            "return_10d": float(r.return_10d) if r.return_10d is not None else None,
+            "return_20d": float(r.return_20d) if r.return_20d is not None else None,
+            "max_runup_20d": float(r.max_runup_20d) if r.max_runup_20d is not None else None,
+            "max_drawdown_20d": float(r.max_drawdown_20d) if r.max_drawdown_20d is not None else None,
+            "status": r.status,
+            "outcome_label": r.outcome_label,
+            "realized_pnl_pct": float(r.realized_pnl_pct) if r.realized_pnl_pct is not None else None,
+            "days_held": r.days_held,
+            "features": feat
+        })
+
+    return {
+        "count": len(dataset),
+        "data": dataset
+    }
+
+
 @router.get("/active")
 @cached(ttl_seconds=300, prefix="signal")
 def get_active_signals(limit: int = 50, db: Session = Depends(get_db)):

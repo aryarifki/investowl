@@ -206,6 +206,14 @@ Di bagian atas halaman, kartu interaktif menyajikan sinyal yang sedang aktif (*O
 - **Filter ML Label**: Menyaring berdasarkan hasil prediksi model pembelajaran mesin (`ALL`, `WIN`, `HOLD`, `LOSS`).
 - **ML Win Prob**: Probabilitas kemenangan yang terkalibrasi akurat pada skala persentase `0.0% – 100.0%`.
 
+### D. AI Outcome Tracking & Dataset Pembelajaran ML
+Sistem kini dilengkapi dengan modul evaluasi imbal hasil ke depan (*Forward Return Tracking*) untuk memvalidasi efektivitas sinyal dan membangun dataset latih Machine Learning:
+- **Pelacakan Multi-Horizon**: Return harga dievaluasi pada interval $T+1, T+3, T+5, T+10$, hingga $T+20$ hari perdagangan bursa pasca-sinyal terbit.
+- **Analisis Ekskursi Ekstrim 20-Hari**:
+  - *Maximum Favorable Excursion* (MFE / `max_runup_20d`): Kenaikan harga tertinggi yang dicapai selama periode penahanan (mengukur potensi cuan maksimum).
+  - *Maximum Adverse Excursion* (MAE / `max_drawdown_20d`): Penurunan harga terdalam yang dialami selama periode penahanan (mengukur risiko drawdown riil).
+- **Snapshot Vektor Fitur Kuantitatif**: Setiap sinyal menyimpan 20+ fitur snapshot (RSI, ATR, CMF, MFI, Wyckoff phase, VCP score, flow persistence, market regime) yang dapat diekspor langsung via API (`GET /api/signal/outcomes/export`) untuk melatih model AI kustom.
+
 ---
 
 ## 7. Terminal Live System Logs & Interactive Job Runner (`/logs`)

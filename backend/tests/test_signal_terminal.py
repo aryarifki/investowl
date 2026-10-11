@@ -81,3 +81,47 @@ def test_get_confluence_screener():
         assert "top_buyer" in first
         assert "quick_tags" in first
         assert isinstance(first["quick_tags"], list)
+
+
+def test_get_outcomes_summary():
+    """Test endpoint returning aggregated signal outcome metrics."""
+    resp = client.get("/api/signal/outcomes/summary")
+    assert resp.status_code == 200
+    res = resp.json()
+
+    assert "total_evaluated" in res
+    assert "counts" in res
+    assert "win" in res["counts"]
+    assert "loss" in res["counts"]
+    assert "active" in res["counts"]
+    assert "returns" in res
+    assert "t1_pct" in res["returns"]
+    assert "t5_pct" in res["returns"]
+    assert "win_rate_5d" in res["returns"]
+    assert "excursion_20d" in res
+    assert "max_runup_pct" in res["excursion_20d"]
+    assert "max_drawdown_pct" in res["excursion_20d"]
+    assert "realized" in res
+
+
+def test_get_outcomes_export():
+    """Test endpoint exporting signals dataset for machine learning."""
+    resp = client.get("/api/signal/outcomes/export?limit=5")
+    assert resp.status_code == 200
+    res = resp.json()
+
+    assert "count" in res
+    assert "data" in res
+    assert isinstance(res["data"], list)
+
+    if res["data"]:
+        first = res["data"][0]
+        assert "id" in first
+        assert "ticker" in first
+        assert "signal_date" in first
+        assert "entry_price" in first
+        assert "outcome_label" in first
+        assert "status" in first
+        assert "features" in first
+        assert isinstance(first["features"], dict)
+

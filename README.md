@@ -71,9 +71,10 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
 - **🐋 Broker Whales Tracker (`/whales`)**:
   - Pelacak portofolio akumulasi dan distribusi bersih broker institusi, smart foreign (AK, BK, KZ, CS), bandar lokal (MG, SQ), dan domestik institusional.
   - Pencarian broker instan dengan keyboard shortcut `/` dan submission langsung via tombol `Enter`.
-- **🧪 Strategy Backtest & Win-Rate Lab (`/backtest`)**:
+- **🧪 Strategy Backtest, AI Outcomes & Win-Rate Lab (`/backtest`)**:
   - Transparansi dan evaluasi akurasi sinyal trading kuantitatif yang diaudit secara otomatis oleh `auditor.py`.
   - Metrik performa kuantitatif: *Win Rate Ratio*, *Average Target Gain*, *Average Drawdown*, *Average Days Held*, dan *Profit Factor*.
+  - **AI Outcome Tracking Foundation**: Pelacakan return multi-horizon ($T+1, T+3, T+5, T+10, T+20$), ekskursi harga ekstrim 20-hari (MFE runup vs MAE drawdown), serta snapshot vektor fitur kuantitatif lengkap siap-latih Machine Learning (XGBoost/LightGBM).
   - Tabel riwayat sinyal komprehensif (`WIN`, `LOSS`, `OPEN`) dengan filter status dan pencarian emiten interaktif.
 - **📊 Interactive Charts & Visualization**:
   - Grafik harga & volume interaktif responsif berbasis Recharts dan Apache ECharts.
@@ -462,6 +463,8 @@ investowl/
 | `POST`| `/api/signal/refresh` | `signal.py` | Invalidasi seluruh cache sinyal `signal:*` pasca-scan harian selesai. |
 | `GET` | `/api/signal/backtest/stats` | `signal.py` | Metrik agregasi akurasi dan win rate sinyal kuantitatif. |
 | `GET` | `/api/signal/backtest/history` | `signal.py` | Daftar riwayat sinyal terverifikasi dan diaudit (`WIN`/`LOSS`/`OPEN`). |
+| `GET` | `/api/signal/outcomes/summary` | `signal.py` | Ringkasan agregat outcome sinyal, multi-horizon returns (T+1..T+20), dan MFE/MAE. |
+| `GET` | `/api/signal/outcomes/export` | `signal.py` | Ekspor dataset performa sinyal & snapshot fitur lengkap (ML-Ready). |
 | `GET` | `/api/system/logs/{type}` | `system.py` | Mengambil log sistem secara real-time. |
 
 ---
