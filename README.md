@@ -16,6 +16,7 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
 
 > 📚 **Dokumentasi Terkait:**
 > - 📘 **[PANDUAN_PENGGUNAAN.md](./PANDUAN_PENGGUNAAN.md)**: Panduan detail penggunaan seluruh fitur, interpretasi metrik, dan operasional.
+> - 🤖 **[PANDUAN_AI_MACHINE_LEARNING.md](./PANDUAN_AI_MACHINE_LEARNING.md)**: Panduan detail memahami AI Machine Learning (P(WIN), MAE/MFE, dan Half-Kelly sizing).
 > - 📝 **[CHANGELOG.md](./CHANGELOG.md)**: Riwayat lengkap perubahan versi, refactoring arsitektur, dan optimasi performa.
 
 ## 📑 Daftar Isi
@@ -71,6 +72,10 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
 - **🐋 Broker Whales Tracker (`/whales`)**:
   - Pelacak portofolio akumulasi dan distribusi bersih broker institusi, smart foreign (AK, BK, KZ, CS), bandar lokal (MG, SQ), dan domestik institusional.
   - Pencarian broker instan dengan keyboard shortcut `/` dan submission langsung via tombol `Enter`.
+- **🤖 AI Dual-Model Meta-Labeling & Dynamic Half-Kelly Sizing (`/signal`)**:
+  - **AI Gatekeeper (Hak Veto)**: Model klasifikasi XGBoost / LightGBM terkalibrasi Platt Scaling (`CalibratedClassifierCV`) yang mengevaluasi 28 fitur kuantitatif point-in-time dan menolak sinyal jika $P(\text{WIN}) < 50\%$.
+  - **Expected Excursions (MAE & MFE)**: Dual regressor HistGradientBoosting untuk memproyeksikan risiko penurunan terdalam (*Maximum Adverse Excursion*) dan potensi lonjakan puncak (*Maximum Favorable Excursion*).
+  - **Dynamic Capital Allocation (Half-Kelly)**: Menghitung persentase modal optimal per emiten ($f_{\text{alloc}} = \min(0.5 \times f^*, 25\%)$) dengan badge visual (`AGGRESSIVE`, `OPTIMAL`, `LIGHT`, `SKIP`).
 - **🧪 Strategy Backtest, AI Outcomes & Win-Rate Lab (`/backtest`)**:
   - Transparansi dan evaluasi akurasi sinyal trading kuantitatif yang diaudit secara otomatis oleh `auditor.py`.
   - Metrik performa kuantitatif: *Win Rate Ratio*, *Average Target Gain*, *Average Drawdown*, *Average Days Held*, dan *Profit Factor*.
@@ -458,8 +463,8 @@ investowl/
 | `GET` | `/api/bandar/detail/{ticker}`| `bandarmology.py` | Analitik bandarmologi lengkap (Broker summary, Top-N). |
 | `GET` | `/api/broker-flow/whales` | `broker.py` | Daftar broker aktif dan klasifikasi taksonomi (Smart Foreign, Bandar, dsb). |
 | `GET` | `/api/broker-flow/whales/{code}` | `broker.py` | Akumulasi dan distribusi bersih broker spesifik beserta estimasi average price. |
-| `GET` | `/api/signal/daily` | `signal.py` | Mengambil daftar sinyal kuantitatif harian teratas beserta skor multi-faktor. |
-| `GET` | `/api/signal/active` | `signal.py` | Daftar posisi terbuka (OPEN) aktif lengkap dengan target TP/SL, R:R, dan Wyckoff phase. |
+| `GET` | `/api/signal/daily` | `signal.py` | Mengambil daftar sinyal kuantitatif harian teratas beserta skor multi-faktor dan metrik AI lengkap (`ml_win_prob`, `ml_label`, `ai_pred_mae`, `ai_pred_mfe`, `kelly_alloc`). |
+| `GET` | `/api/signal/active` | `signal.py` | Daftar posisi terbuka (OPEN) aktif lengkap dengan target TP/SL, R:R, Wyckoff phase, prediksi ekskursi MAE/MFE, dan badge Kelly Sizing. |
 | `POST`| `/api/signal/refresh` | `signal.py` | Invalidasi seluruh cache sinyal `signal:*` pasca-scan harian selesai. |
 | `GET` | `/api/signal/backtest/stats` | `signal.py` | Metrik agregasi akurasi dan win rate sinyal kuantitatif. |
 | `GET` | `/api/signal/backtest/history` | `signal.py` | Daftar riwayat sinyal terverifikasi dan diaudit (`WIN`/`LOSS`/`OPEN`). |

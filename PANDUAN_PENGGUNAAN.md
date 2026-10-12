@@ -167,9 +167,11 @@ Model matematika kuantitatif tingkat lanjut untuk membedah transaksi dana asing:
 
 ---
 
-## 6. AI Multi-Layer Signal Scanner v1.4 (`/signal`)
+## 6. AI Multi-Layer Signal Scanner & Meta-Labeling v1.5 (`/signal`)
 
-Modul pemindai sinyal kuantitatif dan rekomendasi posisi berbasis siklus pasar Wyckoff, Minervini VCP, serta rotasi multi-faktor sektor dan aliran dana Smart Money:
+> 📖 **Panduan Khusus AI**: Untuk penjelasan mendalam mengenai interpretasi probabilitas AI, ekskursi risiko MAE/MFE, dan money management Kelly, baca **[`PANDUAN_AI_MACHINE_LEARNING.md`](./PANDUAN_AI_MACHINE_LEARNING.md)**.
+
+Modul pemindai sinyal kuantitatif dan rekomendasi posisi berbasis siklus pasar Wyckoff, Minervini VCP, rotasi multi-faktor sektor, serta **AI Dual-Model Meta-Labeling (Gatekeeper & Dynamic Risk Management)**:
 
 ### A. Bobot & Lapisan Penilaian Kuantitatif (Composite Score 0 – 100)
 1. **Technical Layer (Skor 0 - 100)**:
@@ -190,23 +192,39 @@ Modul pemindai sinyal kuantitatif dan rekomendasi posisi berbasis siklus pasar W
    - **Hard Cap 45**: Saham dalam tren penurunan parah (< MA50 & < MA200) dibatasi maksimal skor 45 sehingga tidak dapat menjadi sinyal BUY.
    - **Soft Penalties**: Pengurangan skor akumulatif (-5 hingga -15, maks -30) untuk bearish divergence atau kondisi overbought RSI > 72.
 
-### B. Membaca Kartu Actionable Setups (Open Positions)
+### B. Lapisan AI Meta-Labeling & Dynamic Position Sizing (Half-Kelly)
+1. **AI Gatekeeper (Hak Veto)**:
+   - Model klasifikasi XGBoost / LightGBM terkalibrasi Platt Scaling (`CalibratedClassifierCV`) mengevaluasi 28 fitur kuantitatif point-in-time.
+   - Jika probabilitas menang $P(\text{WIN}) < 50\%$, AI **memveto** sinyal tersebut dan tidak menerbitkannya ke daftar rekomendasi aktif (*APPROVED* hanya bila $\ge 50\%$).
+2. **Dual Excursion Regressors (MAE & MFE)**:
+   - *Expected Drawdown* (MAE): Proyeksi potensi floating loss maksimum yang mungkin terjadi sebelum menyentuh TP.
+   - *Expected Runup* (MFE): Proyeksi potensi kenaikan puncak selama siklus penahanan 20 hari.
+3. **Badge Alokasi Modal Half-Kelly (Capped 25%)**:
+   - `🔥 AGGRESSIVE (20-25%)`: Keyakinan AI sangat tinggi dengan ekskursi MFE jauh di atas MAE. Alokasi porsi kas portofolio maksimal.
+   - `⚡ OPTIMAL (10-19%)`: Setup institusional standar berimbang. Alokasi posisi utama portofolio.
+   - `🛡️ LIGHT (1-9%)`: Sinyal valid dengan rasio moderat. Alokasi posisi rintisan.
+   - `⛔ SKIP / NO ALLOC`: Ditolak oleh AI demi manajemen risiko portofolio.
+
+### C. Membaca Kartu Actionable Setups (Open Positions)
 Di bagian atas halaman, kartu interaktif menyajikan sinyal yang sedang aktif (*OPEN*):
 - **Entry, TP, dan SL**: Level harga masuk ideal, target Take Profit, dan batas risiko Stop Loss berbasis support dan ATR.
 - **Risk-to-Reward (R:R)**: Rasio keuntungan terhadap risiko dinamis (1.8x hingga 3.0x).
+- **Badge AI Win Prob & Kelly**: Menampilkan probabilitas kemenangan terkalibrasi dan rekomendasi porsi modal yang aman.
+- **Prediksi MAE / MFE**: Membantu trader memperkirakan titik floating loss wajar dan titik floating profit optimal.
 - **Badge 5D Flow**:
   - `🟢 >= 60% 5D Flow`: Aliran dana konsisten masuk dalam 5 hari terakhir.
   - `🔴 <= 40% 5D Flow`: Dominasi aliran dana keluar/distribusi dalam 5 hari terakhir.
   - `⚪ 50% 5D Flow`: Aliran dana netral.
 - **Chip Sektor**: Memberikan ringkasan status kesehatan sektor emiten (contoh: *Sektor Uptrend*, *Sektor Netral*).
 
-### C. Filter & Navigasi Tabel Daily Market Ranking
+### D. Filter & Navigasi Tabel Daily Market Ranking
 - **Pencarian Ticker**: Ketik kode saham di kolom pencarian untuk memfilter secara instan.
 - **Filter Wyckoff Phase**: Tombol filter cepat untuk menyaring saham berdasarkan fase siklus pasar (`ALL`, `A`, `B`, `C`, `D`, `E`, dan `UNKNOWN`).
 - **Filter ML Label**: Menyaring berdasarkan hasil prediksi model pembelajaran mesin (`ALL`, `WIN`, `HOLD`, `LOSS`).
 - **ML Win Prob**: Probabilitas kemenangan yang terkalibrasi akurat pada skala persentase `0.0% – 100.0%`.
+- **Pengurutan Conviction-Based**: Sinyal diurutkan dari keyakinan probabilitas AI tertinggi ke terendah.
 
-### D. AI Outcome Tracking & Dataset Pembelajaran ML
+### E. AI Outcome Tracking & Dataset Pembelajaran ML
 Sistem kini dilengkapi dengan modul evaluasi imbal hasil ke depan (*Forward Return Tracking*) untuk memvalidasi efektivitas sinyal dan membangun dataset latih Machine Learning:
 - **Pelacakan Multi-Horizon**: Return harga dievaluasi pada interval $T+1, T+3, T+5, T+10$, hingga $T+20$ hari perdagangan bursa pasca-sinyal terbit.
 - **Analisis Ekskursi Ekstrim 20-Hari**:
