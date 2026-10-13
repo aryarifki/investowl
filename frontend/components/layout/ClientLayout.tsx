@@ -19,12 +19,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const isHome = pathname === "/";
   const isSignal = pathname.includes("/signal");
-  const isDetail = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
+  const isDetail = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/nyangkut") && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
   const isWhales = pathname.includes("/whales");
   const isBacktest = pathname.includes("/backtest");
-  const isLogs = pathname.includes("/logs");
+  const isNyangkut = pathname.includes("/nyangkut");
 
   const detailPath = `/${activeTicker || "BBCA"}`;
 
@@ -109,9 +109,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <Icon icon={isBacktest ? "ph:chart-polar-fill" : "ph:chart-polar-duotone"} width="15" />
                 <span>Backtest</span>
               </Link>
-              <Link href="/logs" className={desktopNavLinkClass(isLogs)}>
-                <Icon icon={isLogs ? "ph:terminal-window-fill" : "ph:terminal-window-duotone"} width="15" />
-                <span>Logs</span>
+              <Link href="/nyangkut" className={desktopNavLinkClass(isNyangkut)}>
+                <Icon icon={isNyangkut ? "ph:lifebuoy-fill" : "ph:lifebuoy-duotone"} width="15" />
+                <span>Nyangkut</span>
               </Link>
             </nav>
           )}

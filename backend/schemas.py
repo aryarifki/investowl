@@ -158,3 +158,94 @@ class BrokerWhalesDetailResponse(BaseModel):
     top_accumulations: list[WhaleStockItem]
     top_distributions: list[WhaleStockItem]
 
+
+# ══════════════════════════════════════════════════════════
+# Dashboard Nyangkut Schemas
+# ══════════════════════════════════════════════════════════
+
+class OwnershipSlice(BaseModel):
+    category: str
+    pct: float
+    color: str
+    desc: str
+
+
+class VolumeNode(BaseModel):
+    price: float
+    volumePct: float
+    isNyangkutZone: bool
+
+
+class StockOverviewStats(BaseModel):
+    marketCap: str
+    totalSahamScripless: str
+    scriplessPctText: str
+    freeFloat: str
+    jumlahPemegangSaham: str
+    avgSahamRetail: str
+    konglo: str
+
+
+class TrendDataPoint(BaseModel):
+    month: str
+    val: float
+
+
+class MetricTrendCard(BaseModel):
+    label: str
+    value: str
+    change: str
+    color: str
+    points: list[TrendDataPoint]
+
+
+class NyangkutStockDataResponse(BaseModel):
+    ticker: str
+    name: str
+    currentPrice: float
+    avgAccumulationPrice: float
+    underwaterPct: float
+    estimatedNyangkutPct: float
+    totalSid: int
+    sidChangeMoM: int
+    sidChangePct: float
+    rarScore: float
+    pbiScore: float
+    isHeroBadge: bool
+    ownership: list[OwnershipSlice]
+    volumeNodes: list[VolumeNode]
+    periodDate: str
+    updateLagLabel: str
+    sparklineSid: list[int]
+    overviewStats: StockOverviewStats
+    trendCards: list[MetricTrendCard]
+
+
+
+class LeaderboardHeroItem(BaseModel):
+    rank: int
+    ticker: str
+    name: str
+    pbiScore: float
+    rarScore: float
+    priceDropPct: float
+    sidGrowthMoM: int
+    currentPrice: float
+    avgAccumulationPrice: float
+
+
+class NyangkutLeaderboardResponse(BaseModel):
+    periodDate: str
+    asOf: str
+    count: int
+    data: list[LeaderboardHeroItem]
+
+
+class TickerSearchResult(BaseModel):
+    ticker: str
+    name: str
+    sector: str
+    isHeroBadge: bool = False
+    underwaterPct: float | None = None
+
+

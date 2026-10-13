@@ -11,12 +11,12 @@ export default function BottomNav() {
 
   const isHome = pathname === "/";
   const isSignal = pathname.includes("/signal");
-  const isDashboard = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/logs") && !pathname.includes("/admin");
+  const isDashboard = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/nyangkut") && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
   const isWhales = pathname.includes("/whales");
   const isBacktest = pathname.includes("/backtest");
-  const isLogs = pathname.includes("/logs");
+  const isNyangkut = pathname.includes("/nyangkut");
 
   const targetDashboardPath = `/${activeTicker || "BBCA"}`;
 
@@ -86,11 +86,11 @@ export default function BottomNav() {
           <span className="text-[10px] mt-0.5 font-medium tracking-tight">Backtest</span>
         </Link>
 
-        <Link href="/logs" className={navItemClass(isLogs)}>
-          <div className={iconWrapper(isLogs)}>
-            <Icon icon={isLogs ? "ph:terminal-window-fill" : "ph:terminal-window-duotone"} width="20" />
+        <Link href="/nyangkut" className={navItemClass(isNyangkut)}>
+          <div className={iconWrapper(isNyangkut)}>
+            <Icon icon={isNyangkut ? "ph:lifebuoy-fill" : "ph:lifebuoy-duotone"} width="20" />
           </div>
-          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Logs</span>
+          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Nyangkut</span>
         </Link>
       </div>
     </nav>

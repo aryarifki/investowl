@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date as date_type
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, Numeric, String, Text, Boolean
+from sqlalchemy import BigInteger, Date, DateTime, Integer, Numeric, String, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -123,4 +123,59 @@ class CompanyShareholder(Base):
     name: Mapped[str] = mapped_column(String(255), primary_key=True)
     pct: Mapped[float] = mapped_column(Numeric, nullable=False, default=0.0)
     is_controlling: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+# ══════════════════════════════════════════════════════════
+# Dashboard Nyangkut Models
+# ══════════════════════════════════════════════════════════
+
+class MonthlyOwnershipMetric(Base):
+    """Mirror of `monthly_ownership_metrics` (KSEI/IDX monthly ownership and nyangkut inference)."""
+    __tablename__ = "monthly_ownership_metrics"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False)
+    period_date: Mapped[date_type] = mapped_column(Date, nullable=False)
+
+    total_sid: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sid_change_mom: Mapped[int | None] = mapped_column(Integer, nullable=True, default=0)
+    sid_change_pct: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True, default=0.0)
+
+    foreign_named_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True, default=0.0)
+    foreign_hidden_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True, default=0.0)
+    retail_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True, default=0.0)
+    local_non_retail_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True, default=0.0)
+
+    current_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    avg_accumulation_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    underwater_pct: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True)
+    estimated_nyangkut_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+    is_nyangkut_zone: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
+
+    rar_score: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True, default=0.0)
+    pbi_score: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True, default=0.0)
+    is_hero_badge: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
+
+    corp_action_flag: Mapped[str | None] = mapped_column(String(50), nullable=True, default="NONE")
+    split_adjustment_ratio: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True, default=1.0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StockVolumePriceNode(Base):
+    """Mirror of `stock_volume_price_nodes` (Volume by Price distribution clusters)."""
+    __tablename__ = "stock_volume_price_nodes"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False)
+    period_date: Mapped[date_type] = mapped_column(Date, nullable=False)
+
+    price_level: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    volume_traded: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=0)
+    volume_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True, default=0.0)
+    is_nyangkut: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
+
 

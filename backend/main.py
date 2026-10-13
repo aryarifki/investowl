@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from config import settings
 from database import get_db
 from models import BrokerFlow
-from routers import stocks, broker, auth, signal, system, foreign_flow, bandarmology, shareholders
+from routers import stocks, broker, auth, signal, system, foreign_flow, bandarmology, shareholders, nyangkut
 from idx_bandarmology.universe import refresh_master_tickers
 
 
@@ -94,6 +94,7 @@ app.include_router(foreign_flow.router)
 app.include_router(signal.router)
 app.include_router(system.router)
 app.include_router(shareholders.router) 
+app.include_router(nyangkut.router)
 
 @app.get("/", tags=["Health"])
 def root():

@@ -64,6 +64,14 @@ const nextConfig: NextConfig = {
         source: "/api/users/:path*",
         destination: `${backendUrl}/api/users/:path*`,
       },
+      {
+        source: "/api/v1/:path*",
+        destination: `${backendUrl}/api/v1/:path*`,
+      },
+      {
+        source: "/api/nyangkut/:path*",
+        destination: `${backendUrl}/api/nyangkut/:path*`,
+      },
     ];
   },
   async headers() {
