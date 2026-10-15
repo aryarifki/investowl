@@ -22,13 +22,13 @@ export default function LoginPage() {
         <div className="bg-[var(--md-sys-color-surface-container)] rounded-3xl p-7 sm:p-9 shadow-md border border-[var(--md-sys-color-outline-variant)]/60 relative overflow-hidden backdrop-blur-xs">
           {/* Header Brand */}
           <div className="flex flex-col items-center text-center mb-8 mt-2">
-            <div className="w-16 h-16 mb-4 relative drop-shadow-sm">
+            <div className="w-18 h-18 sm:w-20 sm:h-20 mb-4 relative flex items-center justify-center rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 dark:bg-white/[0.08] border border-[var(--md-sys-color-outline-variant)]/60 dark:border-white/15 p-2 shadow-xs">
               <Image
                 src="/logo.png"
                 alt="The Investowl Logo"
                 fill
-                sizes="64px"
-                className="object-contain"
+                sizes="80px"
+                className="object-contain p-1.5 transition-all dark:brightness-110 dark:drop-shadow-[0_0_8px_rgba(255,184,121,0.35)]"
                 priority
               />
             </div>

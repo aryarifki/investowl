@@ -57,13 +57,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
 
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-7 h-7 relative flex-shrink-0">
+              <div className="w-8.5 h-8.5 relative flex-shrink-0 flex items-center justify-center rounded-xl bg-[var(--md-sys-color-surface-container-high)]/70 dark:bg-white/[0.08] border border-[var(--md-sys-color-outline-variant)]/60 dark:border-white/15 p-1 shadow-2xs group-hover:border-[var(--md-sys-color-primary)]/60 transition-all">
                 <Image
                   src="/logo.png"
                   alt="Investowl Logo"
                   fill
-                  sizes="28px"
-                  className="object-contain"
+                  sizes="34px"
+                  className="object-contain p-0.5 transition-all dark:brightness-110 dark:drop-shadow-[0_0_6px_rgba(255,184,121,0.35)]"
                   priority
                 />
               </div>
