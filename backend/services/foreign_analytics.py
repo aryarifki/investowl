@@ -47,7 +47,12 @@ def compute_hmm_regime(net_flows: list, n_states: int = 3) -> dict:
         return {"states": neutral_states, "probabilities": neutral_probs}
 
 def compute_var_irf(foreign_net: list, returns: list, lags: int = 2, horizon: int = 5) -> dict:
-    """Menghitung Impulse Response dari intervensi asing ke harga saham (VAR)."""
+    """Menghitung Impulse Response dari intervensi asing ke harga saham (VAR).
+    
+    Menggunakan Orthogonalized IRF (Cholesky Decomposition) agar merefleksikan
+    kejutan sebesar 1 standard deviasi volume transaksi asing (bukan 1 rupiah),
+    sehingga dampak return berada pada skala riil yang dapat diinterpretasikan.
+    """
     if len(foreign_net) != len(returns) or len(foreign_net) < 20:
         return {}
         
@@ -56,26 +61,37 @@ def compute_var_irf(foreign_net: list, returns: list, lags: int = 2, horizon: in
         "ret": returns
     }).dropna()
     
-    model = VAR(df)
+    # Hindari crash jika data konstan (std = 0)
+    if df["foreign"].std() == 0 or df["ret"].std() == 0:
+        return {}
+
     try:
+        model = VAR(df)
         results = model.fit(maxlags=lags)
         irf = results.irf(horizon)
         
-        # Ekstrak efek shock 'foreign' (indeks 0) terhadap 'ret' (indeks 1)
-        irfs = irf.irfs[:, 1, 0]
-        stderr = irf.stderr()[:, 1, 0]
+        # Ekstrak efek orthogonalized shock 'foreign' (indeks 0) terhadap 'ret' (indeks 1)
+        irfs = irf.orth_irfs[:, 1, 0]
+        stderr = irf.stderr(orth=True)[:, 1, 0]
         
-        # Hitung Confidence Interval absolut 95% (Z-score 1.96)
+        # Hitung Confidence Interval 95% (Z-score 1.96)
         lower_bound = irfs - 1.96 * stderr
         upper_bound = irfs + 1.96 * stderr
         
+        def _clean_series(arr):
+            res = []
+            for x in arr:
+                val = float(x)
+                res.append(0.0 if (np.isnan(val) or np.isinf(val)) else round(val, 6))
+            return res
+
         return {
-            "foreign_shock_to_ret": irfs.tolist(),
-            "lower_bound": lower_bound.tolist(),
-            "upper_bound": upper_bound.tolist()
+            "foreign_shock_to_ret": _clean_series(irfs),
+            "lower_bound": _clean_series(lower_bound),
+            "upper_bound": _clean_series(upper_bound)
         }
     except Exception:
-        # Menghindari crash jika matriks singular (data terlalu datar)
+        # Menghindari crash jika matriks singular (data multikolinearitas ekstrem)
         return {}
 
 def compute_foreign_hhi(broker_net_values: list) -> float:

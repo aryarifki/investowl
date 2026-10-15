@@ -263,19 +263,26 @@ def build_cache_key(prefix: str, func_name: str, args: tuple, kwargs: dict) -> s
 
 
 def _safe_serialize(result: Any) -> tuple[Any, str]:
-    """Fast-path serializer: serialize sekali untuk Redis & Response tanpa overhead ganda."""
+    """Fast-path serializer: serialize sekali untuk Redis & Response tanpa overhead ganda.
+    Mengonversi Decimal, Date, dan objek non-standar menjadi tipe serializable aman.
+    """
     try:
-        payload = json.dumps(result, default=str)
-        return result, payload
+        serializable = jsonable_encoder(result)
+        payload = json.dumps(serializable)
+        return serializable, payload
     except Exception:
         pass
 
     try:
-        serializable = jsonable_encoder(result)
-        payload = json.dumps(serializable, default=str)
+        payload = json.dumps(result, default=str)
+        try:
+            serializable = json.loads(payload)
+        except Exception:
+            serializable = result
         return serializable, payload
     except Exception:
-        return result, json.dumps(str(result))
+        fallback_str = json.dumps(str(result))
+        return result, fallback_str
 
 
 def cached(
@@ -306,7 +313,13 @@ def cached(
                         if isinstance(cached_val, Response):
                             cached_val.headers.update(headers)
                             return cached_val
-                        return JSONResponse(content=cached_val, headers=headers)
+                        if isinstance(cached_val, str):
+                            return Response(content=cached_val, media_type="application/json", headers=headers)
+                        try:
+                            return JSONResponse(content=cached_val, headers=headers)
+                        except Exception:
+                            payload = json.dumps(cached_val, default=str)
+                            return Response(content=payload, media_type="application/json", headers=headers)
                 except Exception:
                     k = None
 
@@ -321,12 +334,13 @@ def cached(
                     result.headers.update(miss_headers)
                     return result
 
-                if k is not None and result is not None:
+                if result is not None:
                     serializable, payload = _safe_serialize(result)
-                    try:
-                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
-                    except Exception:
-                        pass
+                    if k is not None:
+                        try:
+                            cache.set(k, serializable, ttl_seconds=ttl_seconds)
+                        except Exception:
+                            pass
                     return Response(content=payload, media_type="application/json", headers=miss_headers)
 
                 return JSONResponse(content=result, headers=miss_headers)
@@ -346,7 +360,13 @@ def cached(
                         if isinstance(cached_val, Response):
                             cached_val.headers.update(headers)
                             return cached_val
-                        return JSONResponse(content=cached_val, headers=headers)
+                        if isinstance(cached_val, str):
+                            return Response(content=cached_val, media_type="application/json", headers=headers)
+                        try:
+                            return JSONResponse(content=cached_val, headers=headers)
+                        except Exception:
+                            payload = json.dumps(cached_val, default=str)
+                            return Response(content=payload, media_type="application/json", headers=headers)
                 except Exception:
                     k = None
 
@@ -361,12 +381,13 @@ def cached(
                     result.headers.update(miss_headers)
                     return result
 
-                if k is not None and result is not None:
+                if result is not None:
                     serializable, payload = _safe_serialize(result)
-                    try:
-                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
-                    except Exception:
-                        pass
+                    if k is not None:
+                        try:
+                            cache.set(k, serializable, ttl_seconds=ttl_seconds)
+                        except Exception:
+                            pass
                     return Response(content=payload, media_type="application/json", headers=miss_headers)
 
                 return JSONResponse(content=result, headers=miss_headers)

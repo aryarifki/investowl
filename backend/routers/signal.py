@@ -60,12 +60,12 @@ def get_daily_signals(limit: int = 100, db: Session = Depends(get_db)):
             "date": str(r.date),
             "ml_label": r.ml_label,
             "ml_win_prob": prob,
-            "composite_score": r.composite_score,
+            "composite_score": float(r.composite_score) if r.composite_score is not None else 0.0,
             "scores": {
-                "technical": r.technical_score,
-                "smart_money": r.smart_money_score,
-                "sector": r.sector_score,
-                "fundamental": r.fundamental_score
+                "technical": float(r.technical_score) if r.technical_score is not None else 0.0,
+                "smart_money": float(r.smart_money_score) if r.smart_money_score is not None else 0.0,
+                "sector": float(r.sector_score) if r.sector_score is not None else 0.0,
+                "fundamental": float(r.fundamental_score) if r.fundamental_score is not None else 0.0
             },
             "features": features,
             "wyckoff_phase": features.get("wyckoff_phase") or features.get("wp", "-"),
