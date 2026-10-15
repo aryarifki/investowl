@@ -12,6 +12,8 @@ from functools import wraps
 from typing import Any, Optional, Callable
 
 import redis
+from fastapi.responses import JSONResponse, Response
+from fastapi.encoders import jsonable_encoder
 from config import settings
 
 
@@ -39,13 +41,13 @@ class TTLCache:
     persistensi Redis di belakang layar agar data tidak hilang saat restart.
     """
 
-    def __init__(self, maxsize: int = 128, ttl_seconds: float = 300.0, redis_prefix: str = "ttl") -> None:
+    def __init__(self, maxsize: int = 128, ttl_seconds: float = 300.0, redis_prefix: str = "ttl", enable_redis: bool = True) -> None:
         self.maxsize = maxsize
         self.ttl_seconds = ttl_seconds
         self.redis_prefix = redis_prefix
         self._cache: OrderedDict[str, tuple[float, Any]] = OrderedDict()
         self._lock = Lock()
-        self._redis = _get_shared_redis()
+        self._redis = _get_shared_redis() if enable_redis else None
 
     def get(self, key: str) -> Optional[Any]:
         with self._lock:
@@ -143,10 +145,11 @@ class TTLCache:
 
 
 class UnifiedCache:
-    """Production Multi-tier Cache: Redis Tier-1 with In-Memory TTLCache Tier-2 Fallback."""
+    """Production Multi-tier Cache: L1 In-Memory TTLCache (0ms) + L2 Redis Persistent Layer."""
 
     def __init__(self) -> None:
-        self._fallback = TTLCache(maxsize=512, ttl_seconds=3600.0, redis_prefix="app")
+        # L1: In-memory only (enable_redis=False untuk mencegah double-write redundan)
+        self._fallback = TTLCache(maxsize=512, ttl_seconds=3600.0, enable_redis=False)
         self._redis = _get_shared_redis()
 
     @property
@@ -156,23 +159,30 @@ class UnifiedCache:
         return self._redis is not None
 
     def get(self, key: str) -> Optional[Any]:
-        # 1. Coba baca dari Redis (L1)
+        # 1. Prioritas 1: Baca dari L1 In-Memory Cache (0ms, nol socket I/O)
+        val = self._fallback.get(key)
+        if val is not None:
+            return val
+
+        # 2. Prioritas 2: Baca dari L2 Redis jika L1 Miss (0.5ms)
         if self.is_redis_available and self._redis:
             try:
                 raw = self._redis.get(key)
                 if raw is not None:
-                    return json.loads(raw)
+                    val = json.loads(raw)
+                    # Backfill ke L1 In-Memory untuk mempercepat request berikutnya
+                    self._fallback.set(key, val)
+                    return val
             except Exception:
                 pass
 
-        # 2. Fallback ke In-Memory TTLCache (L2)
-        return self._fallback.get(key)
+        return None
 
     def set(self, key: str, val: Any, ttl_seconds: int = 300) -> bool:
-        # Simpan di fallback in-memory (L2)
+        # 1. Simpan di L1 In-Memory
         self._fallback.set(key, val)
 
-        # Simpan di Redis (L1)
+        # 2. Simpan di L2 Redis (Single Write, tanpa duplikasi prefix)
         if self.is_redis_available and self._redis:
             try:
                 payload = json.dumps(val, default=str)
@@ -256,19 +266,31 @@ def cached(
     ttl_seconds: int = 300,
     prefix: str = "",
     key_builder: Optional[Callable[..., str]] = None,
+    client_cache_seconds: int = 30,
 ):
-    """Dekorator caching serbaguna untuk route FastAPI (mendukung sync & async)."""
+    """Dekorator caching serbaguna untuk route FastAPI (mendukung sync & async).
+    
+    Menyuntikkan HTTP Cache-Control header (max-age, s-maxage, stale-while-revalidate)
+    agar Cloudflare Edge dan browser dapat meng-offload beban server secara otomatis.
+    """
     def decorator(func: Callable):
         is_async = inspect.iscoroutinefunction(func)
 
         if is_async:
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
+                headers = {
+                    "Cache-Control": f"public, max-age={client_cache_seconds}, s-maxage={ttl_seconds}, stale-while-revalidate=30",
+                    "X-Cache": "HIT"
+                }
                 try:
                     k = key_builder(*args, **kwargs) if key_builder else build_cache_key(prefix, func.__name__, args, kwargs)
                     cached_val = cache.get(k)
                     if cached_val is not None:
-                        return cached_val
+                        if isinstance(cached_val, Response):
+                            cached_val.headers.update(headers)
+                            return cached_val
+                        return JSONResponse(content=cached_val, headers=headers)
                 except Exception:
                     k = None
 
@@ -276,20 +298,38 @@ def cached(
 
                 if k is not None and result is not None:
                     try:
-                        cache.set(k, result, ttl_seconds=ttl_seconds)
+                        serializable = jsonable_encoder(result)
+                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
                     except Exception:
-                        pass
-                return result
+                        serializable = result
+                else:
+                    serializable = result
+
+                miss_headers = {
+                    "Cache-Control": f"public, max-age={client_cache_seconds}, s-maxage={ttl_seconds}, stale-while-revalidate=30",
+                    "X-Cache": "MISS"
+                }
+                if isinstance(result, Response):
+                    result.headers.update(miss_headers)
+                    return result
+                return JSONResponse(content=serializable, headers=miss_headers)
 
             return async_wrapper
         else:
             @wraps(func)
             def sync_wrapper(*args, **kwargs):
+                headers = {
+                    "Cache-Control": f"public, max-age={client_cache_seconds}, s-maxage={ttl_seconds}, stale-while-revalidate=30",
+                    "X-Cache": "HIT"
+                }
                 try:
                     k = key_builder(*args, **kwargs) if key_builder else build_cache_key(prefix, func.__name__, args, kwargs)
                     cached_val = cache.get(k)
                     if cached_val is not None:
-                        return cached_val
+                        if isinstance(cached_val, Response):
+                            cached_val.headers.update(headers)
+                            return cached_val
+                        return JSONResponse(content=cached_val, headers=headers)
                 except Exception:
                     k = None
 
@@ -297,10 +337,21 @@ def cached(
 
                 if k is not None and result is not None:
                     try:
-                        cache.set(k, result, ttl_seconds=ttl_seconds)
+                        serializable = jsonable_encoder(result)
+                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
                     except Exception:
-                        pass
-                return result
+                        serializable = result
+                else:
+                    serializable = result
+
+                miss_headers = {
+                    "Cache-Control": f"public, max-age={client_cache_seconds}, s-maxage={ttl_seconds}, stale-while-revalidate=30",
+                    "X-Cache": "MISS"
+                }
+                if isinstance(result, Response):
+                    result.headers.update(miss_headers)
+                    return result
+                return JSONResponse(content=serializable, headers=miss_headers)
 
             return sync_wrapper
 
