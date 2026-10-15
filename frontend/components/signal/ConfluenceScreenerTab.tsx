@@ -100,29 +100,29 @@ export default function ConfluenceScreenerTab() {
 
   const getSignalBadge = (sig: string) => {
     const s = (sig || "").toUpperCase();
-    if (s.includes("BIG ACCUMULATION")) return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-    if (s.includes("ACCUMULATION") || s.includes("NET BUY")) return "bg-teal-500/15 text-teal-400 border-teal-500/30";
-    if (s.includes("BIG DISTRIBUTION")) return "bg-rose-500/15 text-rose-400 border-rose-500/30";
-    if (s.includes("DISTRIBUTION") || s.includes("NET SELL")) return "bg-orange-500/15 text-orange-400 border-orange-500/30";
-    return "bg-neutral-500/15 text-neutral-400 border-neutral-500/30";
+    if (s.includes("BIG ACCUMULATION")) return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+    if (s.includes("ACCUMULATION") || s.includes("NET BUY")) return "bg-teal-500/15 text-teal-700 dark:text-teal-400 border-teal-500/30";
+    if (s.includes("BIG DISTRIBUTION")) return "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30";
+    if (s.includes("DISTRIBUTION") || s.includes("NET SELL")) return "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30";
+    return "bg-neutral-500/15 text-neutral-600 dark:text-neutral-400 border-neutral-500/30";
   };
 
   const getHmmBadge = (state: string) => {
     const s = (state || "").toLowerCase();
-    if (s.includes("strong accum")) return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-    if (s.includes("accum")) return "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
-    if (s.includes("strong dist")) return "bg-rose-500/15 text-rose-400 border-rose-500/30";
-    if (s.includes("dist")) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-    return "bg-neutral-500/15 text-neutral-400 border-neutral-500/30";
+    if (s.includes("strong accum")) return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+    if (s.includes("accum")) return "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30";
+    if (s.includes("strong dist")) return "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30";
+    if (s.includes("dist")) return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+    return "bg-neutral-500/15 text-neutral-600 dark:text-neutral-400 border-neutral-500/30";
   };
 
   const PRESET_TAGS = [
     { id: "ALL", label: "Semua Strategi", icon: "ph:squares-four-bold" },
-    { id: "GOLDEN_CONFLUENCE", label: "Golden Confluence", icon: "ph:star-bold", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
-    { id: "STEALTH_ACCUMULATION", label: "Stealth Accumulation", icon: "ph:shield-check-bold", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" },
-    { id: "GORENGAN_MOMENTUM", label: "Gorengan Momentum", icon: "ph:fire-bold", color: "text-purple-400 border-purple-500/30 bg-purple-500/10" },
-    { id: "DISTRIBUTION_TRAP", label: "Distribution Trap", icon: "ph:warning-bold", color: "text-rose-400 border-rose-500/30 bg-rose-500/10" },
-    { id: "LOW_FLOAT", label: "Low Float (<25%)", icon: "ph:feather-bold", color: "text-sky-400 border-sky-500/30 bg-sky-500/10" },
+    { id: "GOLDEN_CONFLUENCE", label: "Golden Confluence", icon: "ph:star-bold", color: "text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10" },
+    { id: "STEALTH_ACCUMULATION", label: "Stealth Accumulation", icon: "ph:shield-check-bold", color: "text-emerald-700 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10" },
+    { id: "GORENGAN_MOMENTUM", label: "Gorengan Momentum", icon: "ph:fire-bold", color: "text-purple-700 dark:text-purple-400 border-purple-500/30 bg-purple-500/10" },
+    { id: "DISTRIBUTION_TRAP", label: "Distribution Trap", icon: "ph:warning-bold", color: "text-rose-700 dark:text-rose-400 border-rose-500/30 bg-rose-500/10" },
+    { id: "LOW_FLOAT", label: "Low Float (<25%)", icon: "ph:feather-bold", color: "text-sky-700 dark:text-sky-400 border-sky-500/30 bg-sky-500/10" },
   ];
 
   return (
@@ -318,7 +318,7 @@ export default function ConfluenceScreenerTab() {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-rose-400">
+                  <td colSpan={13} className="py-12 text-center text-rose-700 dark:text-rose-400">
                     Gagal memuat data screener: {error.message || "Koneksi backend terputus"}. Silakan coba lagi.
                   </td>
                 </tr>
@@ -368,11 +368,11 @@ export default function ConfluenceScreenerTab() {
                         <span
                           className={`px-1.5 py-0.5 rounded text-[11px] ${
                             isStealthDiscount
-                              ? "bg-emerald-500/15 text-emerald-400"
+                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                               : isSafeNearBandar
-                              ? "bg-cyan-500/15 text-cyan-400"
+                              ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400"
                               : isOverextended
-                              ? "bg-rose-500/15 text-rose-400"
+                              ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
                               : "text-[var(--md-sys-color-on-surface-variant)]"
                           }`}
                         >
@@ -392,12 +392,12 @@ export default function ConfluenceScreenerTab() {
                         <span
                           className={`px-2 py-0.5 rounded border text-xs ${
                             row.conviction_score >= 70
-                              ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
                               : row.conviction_score >= 50
-                              ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30"
+                              ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30"
                               : row.conviction_score >= 40
-                              ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                              : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                              : "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30"
                           }`}
                         >
                           {row.conviction_score}
@@ -406,9 +406,9 @@ export default function ConfluenceScreenerTab() {
 
                       {/* Top Buyer / Top Seller */}
                       <td className="py-2.5 px-3 text-center font-mono text-[11px]">
-                        <span className="text-emerald-400 font-bold" title="Top Buyer">{row.top_buyer}</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-bold" title="Top Buyer">{row.top_buyer}</span>
                         <span className="text-[var(--md-sys-color-on-surface-variant)] mx-1">/</span>
-                        <span className="text-rose-400 font-bold" title="Top Seller">{row.top_seller}</span>
+                        <span className="text-rose-700 dark:text-rose-400 font-bold" title="Top Seller">{row.top_seller}</span>
                       </td>
 
                       {/* Smart Foreign Net */}
@@ -430,7 +430,7 @@ export default function ConfluenceScreenerTab() {
 
                       {/* Free Float % */}
                       <td className="py-2.5 px-3 text-right font-mono text-[11px]">
-                        <span className={row.free_float_est > 0 && row.free_float_est <= 25 ? "text-amber-400 font-bold" : "text-[var(--md-sys-color-on-surface-variant)]"}>
+                        <span className={row.free_float_est > 0 && row.free_float_est <= 25 ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[var(--md-sys-color-on-surface-variant)]"}>
                           {row.free_float_est > 0 ? `${row.free_float_est}%` : "-"}
                         </span>
                       </td>
@@ -449,14 +449,14 @@ export default function ConfluenceScreenerTab() {
                                   key={tag}
                                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded border font-bold ${
                                     isGolden
-                                      ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
                                       : isStealth
-                                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
                                       : isGorengan
-                                      ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
+                                      ? "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30"
                                       : isTrap
-                                      ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                                      : "bg-sky-500/15 text-sky-400 border-sky-500/30"
+                                      ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                                      : "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30"
                                   }`}
                                 >
                                   {tag.replace("_", " ")}

@@ -121,19 +121,19 @@ export default function DailyAlgoSignalsTab() {
 
   const getWyckoffBadge = (phase: string) => {
     const p = (phase || "").toUpperCase();
-    if (p === "E") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-    if (p === "D") return "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
-    if (p === "C") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-    if (p === "B") return "bg-blue-500/15 text-blue-400 border-blue-500/30";
-    if (p === "A") return "bg-rose-500/15 text-rose-400 border-rose-500/30";
-    return "bg-neutral-500/15 text-neutral-400 border-neutral-500/30";
+    if (p === "E") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+    if (p === "D") return "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30";
+    if (p === "C") return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+    if (p === "B") return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30";
+    if (p === "A") return "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30";
+    return "bg-neutral-500/15 text-neutral-600 dark:text-neutral-400 border-neutral-500/30";
   };
 
   const getScoreBadge = (score: number) => {
-    if (score >= 70) return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-    if (score >= 50) return "bg-blue-500/15 text-blue-400 border-blue-500/30";
-    if (score >= 40) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-    return "bg-rose-500/15 text-rose-400 border-rose-500/30";
+    if (score >= 70) return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+    if (score >= 50) return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30";
+    if (score >= 40) return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+    return "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30";
   };
 
   return (
@@ -148,7 +148,7 @@ export default function DailyAlgoSignalsTab() {
             <div>
               <h2 className="text-base font-bold text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                 Actionable Setups (Open Position)
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
                   {activeSignals.length} Setups
                 </span>
               </h2>
@@ -196,7 +196,7 @@ export default function DailyAlgoSignalsTab() {
                             Phase {phase}{item.wyckoff_name ? ` · ${item.wyckoff_name}` : ""}
                           </span>
                           {item.vcp_grade && item.vcp_grade !== "NONE" && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 font-bold">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 font-bold">
                               VCP {item.vcp_grade}
                             </span>
                           )}
@@ -209,10 +209,10 @@ export default function DailyAlgoSignalsTab() {
                             <span
                               className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold ${
                                 item.persistence_5d >= 0.6
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
                                   : item.persistence_5d <= 0.4
-                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                                  : "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
+                                  ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20"
+                                  : "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/20"
                               }`}
                             >
                               {item.persistence_5d >= 0.6 ? "🟢" : item.persistence_5d <= 0.4 ? "🔴" : "⚪"}{" "}
@@ -255,14 +255,14 @@ export default function DailyAlgoSignalsTab() {
                         </div>
                       </div>
                       <div>
-                        <div className="text-[9px] uppercase font-bold text-emerald-400">TP (+{item.target_gain_pct}%)</div>
-                        <div className="font-mono font-bold text-xs text-emerald-400">
+                        <div className="text-[9px] uppercase font-bold text-emerald-700 dark:text-emerald-400">TP (+{item.target_gain_pct}%)</div>
+                        <div className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-400">
                           {item.tp_price ? `Rp ${item.tp_price.toLocaleString("id-ID")}` : "-"}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[9px] uppercase font-bold text-rose-400">SL (-{item.stop_risk_pct}%)</div>
-                        <div className="font-mono font-bold text-xs text-rose-400">
+                        <div className="text-[9px] uppercase font-bold text-rose-700 dark:text-rose-400">SL (-{item.stop_risk_pct}%)</div>
+                        <div className="font-mono font-bold text-xs text-rose-700 dark:text-rose-400">
                           {item.sl_price ? `Rp ${item.sl_price.toLocaleString("id-ID")}` : "-"}
                         </div>
                       </div>
@@ -276,7 +276,7 @@ export default function DailyAlgoSignalsTab() {
                     </div>
 
                     {item.smart_money_notes && (
-                      <div className="text-[10px] text-emerald-400/90 font-mono mb-1.5 truncate" title={item.smart_money_notes}>
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400/90 font-mono mb-1.5 truncate" title={item.smart_money_notes}>
                         ⚡ <span className="opacity-80">SM:</span> {item.smart_money_notes}
                       </div>
                     )}
@@ -398,7 +398,7 @@ export default function DailyAlgoSignalsTab() {
                 </tr>
               ) : dailyError ? (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-rose-400">
+                  <td colSpan={11} className="py-8 text-center text-rose-700 dark:text-rose-400">
                     Gagal memuat data sinyal: {dailyError.message || "Koneksi backend terputus"}. Silakan coba lagi.
                   </td>
                 </tr>
@@ -452,7 +452,7 @@ export default function DailyAlgoSignalsTab() {
                             return <span className="text-[var(--md-sys-color-on-surface-variant)] opacity-50">-</span>;
                           }
                           const norm = raw > 1.0 ? raw / 100.0 : raw;
-                          const color = norm >= 0.55 ? "text-emerald-400" : norm >= 0.45 ? "text-amber-400" : "text-[var(--md-sys-color-on-surface-variant)]";
+                          const color = norm >= 0.55 ? "text-emerald-700 dark:text-emerald-400" : norm >= 0.45 ? "text-amber-700 dark:text-amber-400" : "text-[var(--md-sys-color-on-surface-variant)]";
                           return (
                             <span className={color}>
                               {(norm * 100).toFixed(1)}%
@@ -463,7 +463,7 @@ export default function DailyAlgoSignalsTab() {
                       <td className="py-2.5 px-3 text-right font-mono text-[var(--md-sys-color-on-surface)]">
                         <div className="font-bold">{row.scores.smart_money}</div>
                         {p5d !== undefined && p5d !== null && (
-                          <div className={`text-[9px] ${p5d >= 0.6 ? "text-emerald-400" : p5d <= 0.4 ? "text-rose-400" : "text-neutral-400"}`}>
+                          <div className={`text-[9px] ${p5d >= 0.6 ? "text-emerald-700 dark:text-emerald-400" : p5d <= 0.4 ? "text-rose-700 dark:text-rose-400" : "text-neutral-600 dark:text-neutral-400"}`}>
                             {(p5d * 100).toFixed(0)}% flow
                           </div>
                         )}
@@ -481,7 +481,7 @@ export default function DailyAlgoSignalsTab() {
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono">
                         {vcp !== "NONE" ? (
-                          <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 text-[10px] font-bold">
                             {vcp}
                           </span>
                         ) : (

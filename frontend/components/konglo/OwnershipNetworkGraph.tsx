@@ -665,7 +665,7 @@ export default function OwnershipNetworkGraph() {
                     <div>
                       <div className="px-3 py-1.5 bg-[var(--md-sys-color-surface-container-high)] text-[9px] font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)]">
                         <div className="flex items-center gap-1.5">
-                          <Icon icon="ph:buildings-duotone" width="13" className="text-blue-400" />
+                          <Icon icon="ph:buildings-duotone" width="13" className="text-blue-700 dark:text-blue-400" />
                           <span>Grup Konglomerasi</span>
                         </div>
                         <span>{matchingGroups.length} grup</span>
@@ -678,7 +678,7 @@ export default function OwnershipNetworkGraph() {
                           onClick={() => handleSelectGroup(g.id)}
                         >
                           <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></span>
                             <span className="font-bold text-xs">{g.name}</span>
                           </div>
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)]">
@@ -739,7 +739,7 @@ export default function OwnershipNetworkGraph() {
                           <div className="flex flex-col">
                             <span className="font-bold text-xs">{ent.name}</span>
                             <div className="flex items-center gap-1.5 text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-                              <span className="font-mono text-purple-400 font-semibold">
+                              <span className="font-mono text-purple-700 dark:text-purple-400 font-semibold">
                                 {ent.ticker_count} saham di portofolio
                               </span>
                               {ent.holdings && ent.holdings.length > 0 && (
@@ -852,7 +852,7 @@ export default function OwnershipNetworkGraph() {
               onClick={() => setOnlyControlling(!onlyControlling)}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                 onlyControlling
-                  ? "bg-purple-500/15 text-purple-400 border-purple-500/40 font-bold"
+                  ? "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/40 font-bold"
                   : "bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] hover:text-[var(--md-sys-color-on-surface)]"
               }`}
             >
@@ -909,7 +909,7 @@ export default function OwnershipNetworkGraph() {
                   </div>
                   {!isLast && (
                     <div className="inline-flex items-center text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                      <span className="text-[10px] px-1 font-semibold text-purple-400">
+                      <span className="text-[10px] px-1 font-semibold text-purple-700 dark:text-purple-400">
                         {item.pct ? `${item.pct}%` : ""}
                       </span>
                       <Icon icon="ph:arrow-right-bold" width="12" />
@@ -939,7 +939,7 @@ export default function OwnershipNetworkGraph() {
               <span>Menyusun struktur hierarki konglomerasi...</span>
             </div>
           ) : error ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-xs text-rose-400 p-6 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-xs text-rose-700 dark:text-rose-400 p-6 text-center">
               <Icon icon="ph:warning-circle-duotone" width="36" />
               <div className="font-bold text-sm">Gagal Memuat Relasi Kepemilikan</div>
               <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] max-w-sm">
@@ -948,7 +948,7 @@ export default function OwnershipNetworkGraph() {
             </div>
           ) : nodes.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)] p-8 text-center">
-              <Icon icon="ph:warning-circle-duotone" width="36" className="text-amber-400" />
+              <Icon icon="ph:warning-circle-duotone" width="36" className="text-amber-600 dark:text-amber-400" />
               <div className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
                 Tidak Ada Relasi Kepemilikan yang Cocok
               </div>
@@ -963,7 +963,7 @@ export default function OwnershipNetworkGraph() {
             <div className="space-y-6 flex-1">
               {/* TINGKAT 1: ULTIMATE BENEFICIAL OWNER (HUB) */}
               <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-purple-400 uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">
                   <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span>
                   <span>TINGKAT 1: PENGENDALI AKHIR (ULTIMATE BENEFICIAL OWNER)</span>
                 </div>
@@ -979,12 +979,12 @@ export default function OwnershipNetworkGraph() {
                         className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden shadow-2xs ${
                           isSelected
                             ? "bg-purple-500/15 border-purple-500 shadow-purple-500/10 shadow-md ring-2 ring-purple-500/30"
-                            : "bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-purple-400"
+                            : "bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-purple-500 dark:hover:border-purple-400"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30">
+                            <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30">
                               <Icon icon="ph:crown-bold" width="18" />
                             </div>
                             <div>
@@ -996,13 +996,13 @@ export default function OwnershipNetworkGraph() {
                               </div>
                             </div>
                           </div>
-                          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-500/30">
                             HUB
                           </span>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-[var(--md-sys-color-outline-variant)]/60 flex items-center justify-between text-[11px] font-mono">
                           <span className="text-[var(--md-sys-color-on-surface-variant)]">Mengendalikan:</span>
-                          <span className="font-bold text-purple-400">{children.length} Entitas Utama</span>
+                          <span className="font-bold text-purple-700 dark:text-purple-400">{children.length} Entitas Utama</span>
                         </div>
                       </div>
                     );
@@ -1022,7 +1022,7 @@ export default function OwnershipNetworkGraph() {
               {/* TINGKAT 2: PERUSAHAAN INDUK / HOLDING ENTITY */}
               {hierarchyData.holdingNodes.length > 0 && (
                 <div className="space-y-2.5">
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
                     <span>TINGKAT 2: HOLDING / ENTITAS INDUK PERANTARA</span>
                   </div>
@@ -1040,7 +1040,7 @@ export default function OwnershipNetworkGraph() {
                           className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative shadow-2xs ${
                             isSelected
                               ? "bg-blue-500/15 border-blue-500 shadow-blue-500/10 shadow-md ring-2 ring-blue-500/30"
-                              : "bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-blue-400"
+                              : "bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-blue-500 dark:hover:border-blue-400"
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
@@ -1050,7 +1050,7 @@ export default function OwnershipNetworkGraph() {
                                   {holding.label}
                                 </span>
                                 {holding.type === "emiten" && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold">
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold">
                                     IDX
                                   </span>
                                 )}
@@ -1059,7 +1059,7 @@ export default function OwnershipNetworkGraph() {
                                 {holding.name}
                               </div>
                             </div>
-                            <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                            <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0">
                               <Icon icon="ph:buildings-bold" width="14" />
                             </div>
                           </div>
@@ -1068,7 +1068,7 @@ export default function OwnershipNetworkGraph() {
                           {topParent && (
                             <div className="mt-2.5 pt-2 border-t border-[var(--md-sys-color-outline-variant)]/60 text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between font-mono">
                               <span>Dimiliki oleh:</span>
-                              <span className="font-bold text-purple-400">
+                              <span className="font-bold text-purple-700 dark:text-purple-400">
                                 {topParent.parent?.label} ({topParent.link.pct}%)
                               </span>
                             </div>
@@ -1077,7 +1077,7 @@ export default function OwnershipNetworkGraph() {
                           {/* Keterangan Anak Usaha */}
                           <div className="mt-1 text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between font-mono">
                             <span>Memegang:</span>
-                            <span className="font-bold text-emerald-400">
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400">
                               {children.length} Saham Terbuka
                             </span>
                           </div>
@@ -1099,7 +1099,7 @@ export default function OwnershipNetworkGraph() {
 
               {/* TINGKAT 3: EMITEN BURSA EFEK INDONESIA (LISTED IDX) */}
               <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
                   <span>TINGKAT 3: EMITEN IDX (SAHAM PUBLIK)</span>
                 </div>
@@ -1116,7 +1116,7 @@ export default function OwnershipNetworkGraph() {
                         className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative shadow-2xs ${
                           isSelected
                             ? "bg-emerald-500/15 border-emerald-500 shadow-emerald-500/10 shadow-md ring-2 ring-emerald-500/30"
-                            : "bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-emerald-400"
+                            : "bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500 dark:hover:border-emerald-400"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -1156,7 +1156,7 @@ export default function OwnershipNetworkGraph() {
                             </div>
                             <div className="flex items-center justify-between text-[10px] font-mono">
                               <span className="text-[var(--md-sys-color-on-surface-variant)]">Porsi:</span>
-                              <span className="font-bold text-emerald-400">
+                              <span className="font-bold text-emerald-700 dark:text-emerald-400">
                                 {controllingParent.link.pct}%{" "}
                                 <span className="text-[9px] font-normal text-[var(--md-sys-color-on-surface-variant)]">
                                   ({controllingParent.link.is_controlling ? "Pengendali" : "Substantif"})
@@ -1218,10 +1218,10 @@ export default function OwnershipNetworkGraph() {
                 <div
                   className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5 border ${
                     selectedNode.type === "emiten"
-                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
                       : selectedNode.type === "hub"
-                      ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
-                      : "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                      ? "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30"
+                      : "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30"
                   }`}
                 >
                   {selectedNode.type === "emiten"
@@ -1268,7 +1268,7 @@ export default function OwnershipNetworkGraph() {
                           <div className="text-right">
                             <span
                               className={`font-mono font-bold text-xs ${
-                                link.is_controlling ? "text-purple-400" : "text-emerald-400"
+                                link.is_controlling ? "text-purple-700 dark:text-purple-400" : "text-emerald-700 dark:text-emerald-400"
                               }`}
                             >
                               {link.pct}%
@@ -1313,7 +1313,7 @@ export default function OwnershipNetworkGraph() {
                           <div className="text-right">
                             <span
                               className={`font-mono font-bold text-xs ${
-                                link.is_controlling ? "text-purple-400" : "text-emerald-400"
+                                link.is_controlling ? "text-purple-700 dark:text-purple-400" : "text-emerald-700 dark:text-emerald-400"
                               }`}
                             >
                               {link.pct}%
