@@ -262,6 +262,22 @@ def build_cache_key(prefix: str, func_name: str, args: tuple, kwargs: dict) -> s
     return f"{p}{func_name}:{digest}"
 
 
+def _safe_serialize(result: Any) -> tuple[Any, str]:
+    """Fast-path serializer: serialize sekali untuk Redis & Response tanpa overhead ganda."""
+    try:
+        payload = json.dumps(result, default=str)
+        return result, payload
+    except Exception:
+        pass
+
+    try:
+        serializable = jsonable_encoder(result)
+        payload = json.dumps(serializable, default=str)
+        return serializable, payload
+    except Exception:
+        return result, json.dumps(str(result))
+
+
 def cached(
     ttl_seconds: int = 300,
     prefix: str = "",
@@ -296,23 +312,24 @@ def cached(
 
                 result = await func(*args, **kwargs)
 
-                if k is not None and result is not None:
-                    try:
-                        serializable = jsonable_encoder(result)
-                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
-                    except Exception:
-                        serializable = result
-                else:
-                    serializable = result
-
                 miss_headers = {
                     "Cache-Control": f"public, max-age={client_cache_seconds}, s-maxage={ttl_seconds}, stale-while-revalidate=30",
                     "X-Cache": "MISS"
                 }
+
                 if isinstance(result, Response):
                     result.headers.update(miss_headers)
                     return result
-                return JSONResponse(content=serializable, headers=miss_headers)
+
+                if k is not None and result is not None:
+                    serializable, payload = _safe_serialize(result)
+                    try:
+                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
+                    except Exception:
+                        pass
+                    return Response(content=payload, media_type="application/json", headers=miss_headers)
+
+                return JSONResponse(content=result, headers=miss_headers)
 
             return async_wrapper
         else:
@@ -335,23 +352,24 @@ def cached(
 
                 result = func(*args, **kwargs)
 
-                if k is not None and result is not None:
-                    try:
-                        serializable = jsonable_encoder(result)
-                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
-                    except Exception:
-                        serializable = result
-                else:
-                    serializable = result
-
                 miss_headers = {
                     "Cache-Control": f"public, max-age={client_cache_seconds}, s-maxage={ttl_seconds}, stale-while-revalidate=30",
                     "X-Cache": "MISS"
                 }
+
                 if isinstance(result, Response):
                     result.headers.update(miss_headers)
                     return result
-                return JSONResponse(content=serializable, headers=miss_headers)
+
+                if k is not None and result is not None:
+                    serializable, payload = _safe_serialize(result)
+                    try:
+                        cache.set(k, serializable, ttl_seconds=ttl_seconds)
+                    except Exception:
+                        pass
+                    return Response(content=payload, media_type="application/json", headers=miss_headers)
+
+                return JSONResponse(content=result, headers=miss_headers)
 
             return sync_wrapper
 

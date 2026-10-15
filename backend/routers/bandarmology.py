@@ -335,6 +335,7 @@ def backfill(tickers: str = "BBCA", start: str = "2024-01-01", end: str | None =
 # ============================================================
 
 @router.get("/system-status")
+@cached(ttl_seconds=300, prefix="bandar")
 def get_system_status():
     """Mengembalikan jumlah ticker aktif dan tanggal transaksi terakhir di database."""
     from sqlalchemy import text
@@ -751,7 +752,7 @@ def ticker_detail(
     activity_date = _latest_activity_date(activity_df, ticker, analysis_ts)
 
     try:
-        top_buy, top_sell = analysis.top_net_broker_summary(ticker, trade_date=activity_date, top_n=6)
+        top_buy, top_sell = analysis.top_net_broker_summary(ticker, trade_date=activity_date, top_n=6, activity=activity_df)
     except Exception:
         top_buy, top_sell = pd.DataFrame(), pd.DataFrame()
 
@@ -759,7 +760,15 @@ def ticker_detail(
     profile_df = _profile_flow_from_activity(activity_window)
 
     try:
-        scan_10d = analysis.broker_alpha_scan([ticker], horizon=10, min_events=5, min_net_value=0.0, group_by=("ticker", "broker_code"))
+        scan_10d = analysis.broker_alpha_scan(
+            [ticker],
+            horizon=10,
+            min_events=5,
+            min_net_value=0.0,
+            group_by=("ticker", "broker_code"),
+            activity=activity_df,
+            price_df=price_df,
+        )
     except Exception:
         scan_10d = pd.DataFrame()
 
@@ -802,7 +811,7 @@ def ticker_detail(
             })
 
     try:
-        perf = analysis.price_performance_table(ticker)
+        perf = analysis.price_performance_table(ticker, price_df=price_df)
         perf = perf[perf["timeframe"].isin(["1D", "1W", "1M", "3M", "6M", "YTD"])]
         perf_rows = perf[["timeframe", "return"]].rename(columns={"timeframe": "period", "return": "value"}).to_dict("records")
     except Exception:
@@ -893,6 +902,7 @@ def ticker_detail(
 # ============================================================
 
 @router.get("/dates/{ticker}")
+@cached(ttl_seconds=3600, prefix="bandar")
 def ticker_dates(ticker: str):
     ticker = ticker.upper().strip()
     try:
@@ -906,6 +916,7 @@ def ticker_dates(ticker: str):
 
 
 @router.get("/universe/{mode}")
+@cached(ttl_seconds=3600, prefix="bandar")
 def universe_tickers(mode: str):
     try:
         tickers = universe.get_universe(mode=mode)

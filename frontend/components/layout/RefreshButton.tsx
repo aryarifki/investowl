@@ -32,6 +32,9 @@ export default function RefreshButton() {
       const purgeJson = await purgeRes.json().catch(() => ({}));
       const deletedKeys = purgeJson.deleted_keys ?? 0;
 
+      // Pemicu pre-warming latar belakang otomatis untuk watchlist & global endpoints
+      fetch("/api/logs/cache/warmup", { method: "POST" }).catch(() => {});
+
       // Update Informasi Tahap 2
       setCacheLoading({
         step: "Mengambil data komputasi pasar terverifikasi dari PostgreSQL...",

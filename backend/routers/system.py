@@ -631,3 +631,15 @@ def purge_cache(pattern: str = "*"):
     from core.cache import invalidate_cache
     deleted_count = invalidate_cache(pattern)
     return {"status": "success", "deleted_keys": deleted_count, "pattern": pattern}
+
+
+@router.post("/cache/warmup")
+def warmup_cache():
+    """Memicu pre-warming cache latar belakang untuk seluruh emiten watchlist pengguna & global."""
+    import threading
+    try:
+        from scripts.warm_cache import run_warmup
+        threading.Thread(target=run_warmup, kwargs={"verbose": False}, daemon=True).start()
+        return {"status": "success", "message": "Pre-warming cache dimulai di background."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

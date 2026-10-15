@@ -118,8 +118,26 @@ export default function HomePage() {
     }
   }, [setLocalWatchlist, session?.user?.email]);
 
-  const { data: dateData } = useSWR("/api/bandar/dates/BBCA", fetcher, { revalidateOnFocus: false });
-  const latestDate = dateData?.dates?.[dateData.dates.length - 1] || "ONLINE";
+  const { data: statusData } = useSWR("/api/bandar/system-status", fetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5000,
+  });
+  const { data: dateData } = useSWR("/api/bandar/dates/BBCA", fetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5000,
+  });
+
+  const latestDate = useMemo(() => {
+    if (statusData?.latest_date && statusData.latest_date !== "-") {
+      return statusData.latest_date;
+    }
+    if (dateData?.dates && dateData.dates.length > 0) {
+      return dateData.dates[dateData.dates.length - 1];
+    }
+    return "ONLINE";
+  }, [statusData?.latest_date, dateData?.dates]);
 
   const formattedDate = useMemo(() => {
     if (!latestDate || latestDate === "ONLINE") return "Data Terkini";
@@ -193,8 +211,46 @@ export default function HomePage() {
                 Quantitative Market Terminal
               </h1>
               <p className="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] max-w-2xl leading-relaxed">
-                Platform analitik aliran modal institusi (*Smart Money*) dan arus kas asing (*Foreign Flow*) pasar modal Indonesia.
+                Platform analitik aliran modal institusi (Smart Money) dan arus kas asing (Foreign Flow) pasar modal Indonesia.
               </p>
+            </div>
+
+            {/* SOCIAL MEDIA / CONTACT ICONS */}
+            <div className="flex items-center gap-2 pt-2 sm:pt-0">
+              <a
+                href="mailto:adryanrifky716@gmail.com"
+                title="Email: adryanrifky716@gmail.com"
+                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] hover:border-[var(--md-sys-color-primary)]/50 hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
+              >
+                <Icon icon="ph:envelope-simple-duotone" width="18" />
+              </a>
+              <a
+                href="https://t.me/theinvestowl"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Telegram Channel: @theinvestowl"
+                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-sky-500 hover:border-sky-500/50 hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
+              >
+                <Icon icon="ph:telegram-logo-duotone" width="18" />
+              </a>
+              <a
+                href="https://www.instagram.com/rifqiaarya?dlrf=bzJzbzZhZW1qanFr"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Instagram: @rifqiaarya"
+                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-pink-500 hover:border-pink-500/50 hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
+              >
+                <Icon icon="ph:instagram-logo-duotone" width="18" />
+              </a>
+              <a
+                href="https://github.com/aryarifki"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="GitHub: aryarifki"
+                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
+              >
+                <Icon icon="ph:github-logo-duotone" width="18" />
+              </a>
             </div>
           </div>
         </section>

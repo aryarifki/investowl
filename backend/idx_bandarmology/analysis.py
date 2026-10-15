@@ -54,8 +54,13 @@ def broker_profile_of(code: str | None) -> str:
     return _BROKER_PROFILES.get((code or "").upper(), "lainnya")
 
 
-def _forward_return_frame(tickers: list[str] | None = None, horizons: tuple[int, ...] = (1, 3, 5, 10)) -> pd.DataFrame:
-    price_df = storage.read_prices(tickers)
+def _forward_return_frame(
+    tickers: list[str] | None = None,
+    horizons: tuple[int, ...] = (1, 3, 5, 10),
+    price_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    if price_df is None:
+        price_df = storage.read_prices(tickers)
     if price_df.empty:
         return pd.DataFrame()
     df = price_df.sort_values(["ticker", "date"]).copy()
@@ -153,9 +158,11 @@ def plot_smart_money_daily_flow(ticker: str, lookback_days: int = 30) -> plt.Fig
     return fig
 
 
-def price_performance_table(ticker: str) -> pd.DataFrame:
+def price_performance_table(ticker: str, price_df: pd.DataFrame | None = None) -> pd.DataFrame:
     """Multi-timeframe close-to-close returns from stored prices."""
-    price_df = storage.read_prices([ticker]).sort_values("date")
+    if price_df is None:
+        price_df = storage.read_prices([ticker])
+    price_df = price_df.sort_values("date")
     if price_df.empty:
         return pd.DataFrame()
     latest = price_df.iloc[-1]
@@ -190,8 +197,14 @@ def latest_signal_components(ticker: str) -> dict[str, object]:
     return row
 
 
-def top_net_broker_summary(ticker: str, trade_date: pd.Timestamp | str | None = None, top_n: int = 6) -> tuple[pd.DataFrame, pd.DataFrame]:
-    activity = storage.read_broker_activity([ticker])
+def top_net_broker_summary(
+    ticker: str,
+    trade_date: pd.Timestamp | str | None = None,
+    top_n: int = 6,
+    activity: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if activity is None:
+        activity = storage.read_broker_activity([ticker])
     if activity.empty:
         return pd.DataFrame(), pd.DataFrame()
     if trade_date is None:
@@ -297,14 +310,17 @@ def broker_alpha_scan(
     min_events: int = 5,
     min_net_value: float = 0.0,
     group_by: tuple[str, ...] = ("ticker", "broker_code"),
+    activity: pd.DataFrame | None = None,
+    price_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Find broker/ticker combinations where repeated net-buy events precede gains.
 
     Uses a one-sided normal approximation on the mean forward return. This is a
     screening statistic, not proof of causality.
     """
-    activity = storage.read_broker_activity(tickers)
-    returns = _forward_return_frame(tickers, horizons=(horizon,))
+    if activity is None:
+        activity = storage.read_broker_activity(tickers)
+    returns = _forward_return_frame(tickers, horizons=(horizon,), price_df=price_df)
     target_col = f"fwd_return_{horizon}d"
     if activity.empty or returns.empty or target_col not in returns.columns:
         return pd.DataFrame()
