@@ -41,3 +41,13 @@ def test_foreign_exodus_radar_endpoint():
         assert "broker_name" in first_broker
         assert "net_sell_idr" in first_broker
         assert first_broker["net_sell_idr"] <= 0
+
+    # Specifically test MSCI crash date 2026-10-02
+    oct2_rows = [p for p in data["timeline"] if p["date"] == "2026-10-02"]
+    if oct2_rows:
+        oct2 = oct2_rows[0]
+        # Inverted math must produce negative flow for foreign selling exodus
+        assert oct2["daily_flow"] < 0
+        # Oct 2nd outflow was ~35.04 Trillion IDR (-3.504e13)
+        assert oct2["daily_flow"] <= -30.0e12
+        assert oct2["cumulative_flow"] < 0

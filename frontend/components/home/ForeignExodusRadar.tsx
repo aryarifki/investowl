@@ -14,7 +14,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { fmtRp, signedColor } from "@/lib/format";
+import { fmtRp, fmtRadarFlow, signedColor } from "@/lib/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => {
   if (!res.ok) throw new Error("Gagal mengambil data radar");
@@ -107,6 +107,17 @@ export default function ForeignExodusRadar() {
   const isNetOutflow = useMemo(() => {
     if (!timeline.length) return true;
     return timeline[timeline.length - 1].cumulative_flow < 0;
+  }, [timeline]);
+
+  // Dynamic gradient offset: ensures negative cumulative flows fill RED and positive flows fill GREEN
+  const gradientOffset = useMemo(() => {
+    if (!timeline.length) return 0;
+    const flows = timeline.map((d) => d.cumulative_flow);
+    const max = Math.max(...flows);
+    const min = Math.min(...flows);
+    if (max <= 0) return 0;
+    if (min >= 0) return 1;
+    return max / (max - min);
   }, [timeline]);
 
   const formatShortDate = (dateStr: string) => {
@@ -248,8 +259,9 @@ export default function ForeignExodusRadar() {
                 <ComposedChart data={timeline} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                   <defs>
                     <linearGradient id="flowGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={isNetOutflow ? "#f43f5e" : "#10b981"} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={isNetOutflow ? "#f43f5e" : "#10b981"} stopOpacity={0.02} />
+                      <stop offset={gradientOffset} stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset={gradientOffset} stopColor="#f43f5e" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={isNetOutflow ? "#f43f5e" : "#10b981"} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   
@@ -282,7 +294,7 @@ export default function ForeignExodusRadar() {
                     domain={["auto", "auto"]}
                     stroke="var(--md-sys-color-on-surface-variant)"
                     fontSize={10}
-                    tickFormatter={(v) => fmtRp(v)}
+                    tickFormatter={(v) => fmtRadarFlow(v)}
                     tickLine={false}
                     axisLine={{ stroke: "var(--md-sys-color-outline-variant)", opacity: 0.5 }}
                   />
@@ -303,13 +315,13 @@ export default function ForeignExodusRadar() {
                             <div className="flex justify-between gap-4">
                               <span>Foreign Net (Hari Ini):</span>
                               <strong style={{ color: signedColor(p.daily_flow) }}>
-                                {fmtRp(p.daily_flow)}
+                                {p.daily_flow > 0 ? "+" : ""}{fmtRadarFlow(p.daily_flow)}
                               </strong>
                             </div>
                             <div className="flex justify-between gap-4">
                               <span>Kumulatif Flow:</span>
                               <strong style={{ color: signedColor(p.cumulative_flow) }}>
-                                {fmtRp(p.cumulative_flow)}
+                                {p.cumulative_flow > 0 ? "+" : ""}{fmtRadarFlow(p.cumulative_flow)}
                               </strong>
                             </div>
                           </div>
@@ -326,6 +338,7 @@ export default function ForeignExodusRadar() {
                     yAxisId="right"
                     type="monotone"
                     dataKey="cumulative_flow"
+                    baseValue={0}
                     fill="url(#flowGradient)"
                     stroke={isNetOutflow ? "#f43f5e" : "#10b981"}
                     strokeWidth={2}
@@ -391,7 +404,7 @@ export default function ForeignExodusRadar() {
                       </div>
 
                       <div className="font-bold text-rose-600 dark:text-rose-400 tabular-nums shrink-0 ml-2">
-                        {fmtRp(broker.net_sell_idr)}
+                        {fmtRadarFlow(broker.net_sell_idr)}
                       </div>
                     </div>
                   ))}
@@ -433,10 +446,10 @@ export default function ForeignExodusRadar() {
                           {row.ihsg_close.toLocaleString("id-ID")}
                         </td>
                         <td className="py-2 px-3 text-right font-bold tabular-nums" style={{ color: signedColor(row.daily_flow) }}>
-                          {fmtRp(row.daily_flow)}
+                          {row.daily_flow > 0 ? "+" : ""}{fmtRadarFlow(row.daily_flow)}
                         </td>
                         <td className="py-2 px-3 text-right font-bold tabular-nums" style={{ color: signedColor(row.cumulative_flow) }}>
-                          {fmtRp(row.cumulative_flow)}
+                          {row.cumulative_flow > 0 ? "+" : ""}{fmtRadarFlow(row.cumulative_flow)}
                         </td>
                       </tr>
                     ))}

@@ -119,13 +119,14 @@ def get_foreign_exodus_radar(
         return cached_data
 
     # 1. Query Makro: IHSG Close dan True Foreign Net Flow (prices + idx_index_summary)
+    # Math: SUM(foreign_buy - foreign_sell) * 1000 (IDR). Aliran negatif = capital outflow (exodus).
     q_macro = text("""
         WITH latest_dates AS (
             SELECT DISTINCT date FROM prices ORDER BY date DESC LIMIT :days
         )
         SELECT p.date,
                ROUND(s.close, 2) as ihsg_close,
-               SUM(p.foreign_sell - p.foreign_buy) as daily_flow
+               SUM(p.foreign_buy - p.foreign_sell) * 1000 as daily_flow
         FROM prices p
         JOIN latest_dates ld ON p.date = ld.date
         LEFT JOIN idx_index_summary s ON p.date = s.date AND s.index_code = 'COMPOSITE'

@@ -13,6 +13,14 @@ export function fmtRp(n: number | null | undefined): string {
   return `${sign}Rp ${v.toLocaleString("id-ID")}`;
 }
 
+export function fmtRadarFlow(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return "-";
+  const sign = n < 0 ? "-" : "";
+  const v = Math.abs(n);
+  if (v >= 1e12) return `${sign}Rp ${(v / 1e12).toFixed(2)} T`;
+  return `${sign}Rp ${(v / 1e9).toFixed(2)} B`;
+}
+
 export function fmtPct(n: number | null | undefined, decimals: number = 2): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "-";
   const sign = n > 0 ? "+" : "";
