@@ -414,19 +414,20 @@ _CONFLUENCE_TTL = 180  # 3 minutes
 
 
 @router.get("/confluence-screener")
-@cached(ttl_seconds=1800, prefix="confluence")
+@cached(ttl_seconds=1800, prefix="confluence_v2")
 def get_confluence_screener(
     universe_mode: str = "lq45",
     analysis_date: Optional[str] = None,
     window_days: int = 20,
     tickers: Optional[str] = None,
     min_conviction: float = 0.0,
+    min_liquidity: float = 0.0,
     tag_filter: Optional[str] = None,
     signal_filter: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Multi-parameter confluence screener combining bandarmology conviction, foreign flow HMM, and float stats."""
-    raw_cache_key = f"confluence_raw:{universe_mode}|{analysis_date}|{window_days}|{tickers}"
+    raw_cache_key = f"confluence_raw_v2:{universe_mode}|{analysis_date}|{window_days}|{tickers}"
     cached_entry = cache.get(raw_cache_key)
 
     if cached_entry:
@@ -581,6 +582,7 @@ def get_confluence_screener(
                 "company_name": comp_name,
                 "group_name": group_name,
                 "current_price": curr_px,
+                "total_value": float(latest_flow.get("total_value", 0.0)) if pd.notna(latest_flow.get("total_value")) else 0.0,
                 "signal": sig,
                 "conviction_score": conv_score,
                 "bandar_avg_price": bandar_avg,
@@ -610,6 +612,8 @@ def get_confluence_screener(
     filtered = raw_results
     if min_conviction > 0:
         filtered = [x for x in filtered if x["conviction_score"] >= min_conviction]
+    if min_liquidity > 0:
+        filtered = [x for x in filtered if float(x.get("total_value", 0.0)) >= min_liquidity]
     if tag_filter:
         filtered = [x for x in filtered if tag_filter.upper() in x["quick_tags"]]
     if signal_filter:

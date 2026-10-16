@@ -31,6 +31,7 @@ interface ConfluenceRow {
   top_buyer: string;
   top_seller: string;
   quick_tags: string[];
+  total_value?: number;
 }
 
 export default function ConfluenceScreenerTab() {
@@ -39,6 +40,7 @@ export default function ConfluenceScreenerTab() {
   const [selectedTag, setSelectedTag] = useState<string>("ALL");
   const [selectedSignal, setSelectedSignal] = useState<string>("ALL");
   const [minConviction, setMinConviction] = useState<number>(0);
+  const [minLiq, setMinLiq] = useState<number>(0);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"conviction" | "distance" | "foreign" | "gorengan">("conviction");
   const [sortAsc, setSortAsc] = useState(false);
@@ -63,8 +65,9 @@ export default function ConfluenceScreenerTab() {
       const matchTag = selectedTag === "ALL" || (row.quick_tags && row.quick_tags.includes(selectedTag));
       const matchSignal = selectedSignal === "ALL" || (row.signal && row.signal.toLowerCase().includes(selectedSignal.toLowerCase()));
       const matchConviction = (row.conviction_score ?? 0) >= minConviction;
+      const matchLiq = !minLiq || ((row.total_value ?? 0) >= minLiq);
 
-      return Boolean(matchSearch && matchTag && matchSignal && matchConviction);
+      return Boolean(matchSearch && matchTag && matchSignal && matchConviction && matchLiq);
     });
 
     result.sort((a, b) => {
@@ -87,7 +90,7 @@ export default function ConfluenceScreenerTab() {
     });
 
     return result;
-  }, [rawRows, search, selectedTag, selectedSignal, minConviction, sortBy, sortAsc]);
+  }, [rawRows, search, selectedTag, selectedSignal, minConviction, minLiq, sortBy, sortAsc]);
 
   const handleSort = (col: "conviction" | "distance" | "foreign" | "gorengan") => {
     if (sortBy === col) {
@@ -211,6 +214,21 @@ export default function ConfluenceScreenerTab() {
               <option value="big accumulation">Big Accumulation Saja</option>
               <option value="neutral">Netral</option>
               <option value="distribution">Distribusi</option>
+            </select>
+          </div>
+
+          {/* Minimum Liquidity Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium">Likuiditas:</span>
+            <select
+              value={minLiq}
+              onChange={(e) => setMinLiq(Number(e.target.value))}
+              className="py-1.5 px-2.5 text-xs rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] focus:outline-none cursor-pointer font-semibold"
+            >
+              <option value={0}>Semua Likuiditas</option>
+              <option value={1000000000}>&gt; Rp 1 Miliar / hari</option>
+              <option value={5000000000}>&gt; Rp 5 Miliar / hari</option>
+              <option value={10000000000}>&gt; Rp 10 Miliar / hari</option>
             </select>
           </div>
 
@@ -355,7 +373,12 @@ export default function ConfluenceScreenerTab() {
 
                       {/* Current Price */}
                       <td className="py-2.5 px-3 text-right font-mono font-semibold text-[var(--md-sys-color-on-surface)]">
-                        {row.current_price ? `Rp ${row.current_price.toLocaleString("id-ID")}` : "-"}
+                        <div>{row.current_price ? `Rp ${row.current_price.toLocaleString("id-ID")}` : "-"}</div>
+                        {row.total_value && row.total_value > 0 ? (
+                          <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-normal tabular-nums" title="Nilai Transaksi Harian">
+                            Vol: {fmtRp(row.total_value)}
+                          </div>
+                        ) : null}
                       </td>
 
                       {/* Bandar Avg Price */}

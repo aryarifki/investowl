@@ -80,7 +80,16 @@ def test_get_confluence_screener():
         assert "free_float_est" in first
         assert "top_buyer" in first
         assert "quick_tags" in first
+        assert "total_value" in first
         assert isinstance(first["quick_tags"], list)
+
+    # Test filtering with min_liquidity
+    resp_liq = client.get("/api/signal/confluence-screener?universe_mode=lq45&window_days=20&min_liquidity=1000000000")
+    assert resp_liq.status_code == 200
+    res_liq = resp_liq.json()
+    assert "data" in res_liq
+    for row in res_liq["data"]:
+        assert row.get("total_value", 0.0) >= 1000000000
 
 
 def test_get_outcomes_summary():

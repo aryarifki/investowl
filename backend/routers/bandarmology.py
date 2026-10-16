@@ -1478,13 +1478,17 @@ def get_dynamic_universe(mode: str) -> list[str]:
         
     return ["ANTM", "BBCA", "BBRI", "BMRI", "GOTO", "TLKM"]
 
-@router.get("/screener-v2")
+@router.get("/screener-v2", deprecated=True)
 def smart_screener(
     universe_mode: str = "lq45",
     analysis_date: str = None,
     window_days: int = 20,
     tickers: str = None
 ):
+    """
+    [DEPRECATED]: Gunakan endpoint terpadu `/api/signal/confluence-screener`.
+    Endpoint ini dipertahankan sementara demi backward compatibility.
+    """
     import pandas as pd
     from idx_bandarmology import analysis, storage
 

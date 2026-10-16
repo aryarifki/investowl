@@ -42,10 +42,6 @@ const ValidationTab = dynamic(() => import("@/components/analysis/ValidationTab"
   ssr: false,
   loading: () => <TabSkeleton title="Historical Validation" />,
 });
-const ScreenerTab = dynamic(() => import("@/components/analysis/ScreenerTab"), {
-  ssr: false,
-  loading: () => <TabSkeleton title="Alpha Screener" />,
-});
 const RawTablesTab = dynamic(() => import("@/components/analysis/RawTablesTab"), {
   ssr: false,
   loading: () => <TabSkeleton title="Raw Records" />,
@@ -58,7 +54,6 @@ const TABS = [
   { id: "Broker Flow", label: "Broker Flow", icon: "ph:arrows-left-right-duotone" },
   { id: "Causality", label: "Causality", icon: "ph:git-commit-duotone" },
   { id: "Validation", label: "Validation", icon: "ph:check-circle-duotone" },
-  { id: "Screener", label: "Screener", icon: "ph:funnel-simple-duotone" },
   { id: "Raw Tables", label: "Raw Records", icon: "ph:table-duotone" },
 ];
 
@@ -324,14 +319,6 @@ export default function TickerPage() {
             universeMode={universe}
             horizon={horizon}
             minEvents={minEvents}
-          />
-        )}
-        {activeTab === "Screener" && (
-          <ScreenerTab
-            universeMode={universe}
-            analysisDate={analysisDate}
-            windowDays={windowDays}
-            customTickers={localWatchlist}
           />
         )}
         {activeTab === "Raw Tables" && (
