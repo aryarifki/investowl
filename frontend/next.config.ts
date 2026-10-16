@@ -72,6 +72,10 @@ const nextConfig: NextConfig = {
         source: "/api/nyangkut/:path*",
         destination: `${backendUrl}/api/nyangkut/:path*`,
       },
+      {
+        source: "/api/forensic/:path*",
+        destination: `${backendUrl}/api/forensic/:path*`,
+      },
     ];
   },
   async headers() {

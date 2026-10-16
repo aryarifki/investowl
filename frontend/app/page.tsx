@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { Icon } from "@iconify/react";
 import TickerCard from "@/components/home/TickerCard";
+import ForeignExodusRadar from "@/components/home/ForeignExodusRadar";
 import { useAppStore } from "@/store/useAppStore";
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
@@ -199,61 +200,8 @@ export default function HomePage() {
     <div className="min-h-screen bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] transition-colors duration-200">
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* MARKET HEADER */}
-        <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/60 rounded-3xl p-6 sm:p-7 transition-all">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)]/50 text-xs font-medium">
-                <Icon icon="ph:calendar-blank-duotone" width="14" className="text-[var(--md-sys-color-primary)]" />
-                <span>Data Terkini: <strong className="font-semibold text-[var(--md-sys-color-on-surface)]">{formattedDate}</strong></span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--md-sys-color-on-surface)] tracking-tight">
-                Quantitative Market Terminal
-              </h1>
-              <p className="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] max-w-2xl leading-relaxed">
-                Platform analitik aliran modal institusi (Smart Money) dan arus kas asing (Foreign Flow) pasar modal Indonesia.
-              </p>
-            </div>
-
-            {/* SOCIAL MEDIA / CONTACT ICONS */}
-            <div className="flex items-center gap-2 pt-2 sm:pt-0">
-              <a
-                href="mailto:adryanrifky716@gmail.com"
-                title="Email: adryanrifky716@gmail.com"
-                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] hover:border-[var(--md-sys-color-primary)]/50 hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
-              >
-                <Icon icon="ph:envelope-simple-duotone" width="18" />
-              </a>
-              <a
-                href="https://t.me/theinvestowl"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Telegram Channel: @theinvestowl"
-                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-sky-500 hover:border-sky-500/50 hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
-              >
-                <Icon icon="ph:telegram-logo-duotone" width="18" />
-              </a>
-              <a
-                href="https://www.instagram.com/rifqiaarya?dlrf=bzJzbzZhZW1qanFr"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Instagram: @rifqiaarya"
-                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-pink-500 hover:border-pink-500/50 hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
-              >
-                <Icon icon="ph:instagram-logo-duotone" width="18" />
-              </a>
-              <a
-                href="https://github.com/aryarifki"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="GitHub: aryarifki"
-                className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 shadow-2xs"
-              >
-                <Icon icon="ph:github-logo-duotone" width="18" />
-              </a>
-            </div>
-          </div>
-        </section>
+        {/* FOREIGN EXODUS RADAR (REPLACES STATIC HEADER) */}
+        <ForeignExodusRadar />
 
         {/* WATCHLIST & SCANNER SECTION */}
         <section className="space-y-4">
