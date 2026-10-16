@@ -18,13 +18,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isAuthPage = pathname === "/login" || pathname === "/pending";
 
   const isHome = pathname === "/";
-  const isSignal = pathname.includes("/signal");
-  const isDetail = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/nyangkut") && !pathname.includes("/admin");
+  const isSignal = pathname.includes("/signal") || pathname.includes("/backtest");
+  const isWhales = pathname.includes("/whales") || pathname.includes("/nyangkut");
+  const isDetail = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !isWhales && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
-  const isWhales = pathname.includes("/whales");
-  const isBacktest = pathname.includes("/backtest");
-  const isNyangkut = pathname.includes("/nyangkut");
 
   const detailPath = `/${activeTicker || "BBCA"}`;
 
@@ -103,15 +101,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </Link>
               <Link href="/whales" className={desktopNavLinkClass(isWhales)}>
                 <Icon icon={isWhales ? "ph:fish-simple-fill" : "ph:fish-simple-duotone"} width="15" />
-                <span>Whales</span>
-              </Link>
-              <Link href="/backtest" className={desktopNavLinkClass(isBacktest)}>
-                <Icon icon={isBacktest ? "ph:chart-polar-fill" : "ph:chart-polar-duotone"} width="15" />
-                <span>Backtest</span>
-              </Link>
-              <Link href="/nyangkut" className={desktopNavLinkClass(isNyangkut)}>
-                <Icon icon={isNyangkut ? "ph:lifebuoy-fill" : "ph:lifebuoy-duotone"} width="15" />
-                <span>Nyangkut</span>
+                <span>Whales & Ritel</span>
               </Link>
             </nav>
           )}

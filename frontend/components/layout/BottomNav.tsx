@@ -10,13 +10,11 @@ export default function BottomNav() {
   const { activeTicker } = useAppStore();
 
   const isHome = pathname === "/";
-  const isSignal = pathname.includes("/signal");
-  const isDashboard = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !pathname.includes("/whales") && !pathname.includes("/backtest") && !pathname.includes("/nyangkut") && !pathname.includes("/admin");
+  const isSignal = pathname.includes("/signal") || pathname.includes("/backtest");
+  const isWhales = pathname.includes("/whales") || pathname.includes("/nyangkut");
+  const isDashboard = !isHome && !isSignal && !pathname.includes("/foreign") && !pathname.includes("/konglo") && !isWhales && !pathname.includes("/admin");
   const isForeign = pathname.includes("/foreign");
   const isKonglo = pathname.includes("/konglo");
-  const isWhales = pathname.includes("/whales");
-  const isBacktest = pathname.includes("/backtest");
-  const isNyangkut = pathname.includes("/nyangkut");
 
   const targetDashboardPath = `/${activeTicker || "BBCA"}`;
 
@@ -77,20 +75,6 @@ export default function BottomNav() {
             <Icon icon={isWhales ? "ph:fish-simple-fill" : "ph:fish-simple-duotone"} width="20" />
           </div>
           <span className="text-[10px] mt-0.5 font-medium tracking-tight">Whales</span>
-        </Link>
-
-        <Link href="/backtest" className={navItemClass(isBacktest)}>
-          <div className={iconWrapper(isBacktest)}>
-            <Icon icon={isBacktest ? "ph:chart-polar-fill" : "ph:chart-polar-duotone"} width="20" />
-          </div>
-          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Backtest</span>
-        </Link>
-
-        <Link href="/nyangkut" className={navItemClass(isNyangkut)}>
-          <div className={iconWrapper(isNyangkut)}>
-            <Icon icon={isNyangkut ? "ph:lifebuoy-fill" : "ph:lifebuoy-duotone"} width="20" />
-          </div>
-          <span className="text-[10px] mt-0.5 font-medium tracking-tight">Nyangkut</span>
         </Link>
       </div>
     </nav>
