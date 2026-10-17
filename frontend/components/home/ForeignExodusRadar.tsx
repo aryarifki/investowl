@@ -136,21 +136,13 @@ export default function ForeignExodusRadar() {
   };
 
   return (
-    <section className={`sticky top-[3.75rem] z-30 bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-md transition-all duration-300 relative ${
-      isExpanded 
-        ? "max-h-[calc(100vh-8.5rem)] md:max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin" 
-        : "overflow-hidden"
-    }`}>
+    <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/70 rounded-3xl p-5 sm:p-6 shadow-xs transition-all relative overflow-hidden">
       
       {/* ====== ALWAYS VISIBLE: MAIN CARD HEADER ====== */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
-        isExpanded 
-          ? "sticky top-0 z-20 bg-[var(--md-sys-color-surface-container)]/98 backdrop-blur-md pb-3 pt-0.5 -mt-1 -mx-1 px-1 border-b border-[var(--md-sys-color-outline-variant)]/40" 
-          : ""
-      }`}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         
         {/* LEFT SECTION: IHSG REAL-TIME/CLOSING PRICE */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3.5 shrink-0">
           <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] flex items-center justify-center shrink-0 border border-[var(--md-sys-color-outline-variant)] shadow-2xs">
             <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" className="animate-spin-slow text-[var(--md-sys-color-primary)]">
               <g fill="currentColor">
@@ -192,8 +184,23 @@ export default function ForeignExodusRadar() {
           </div>
         </div>
 
-        {/* CENTER SECTION: STATUS BADGE (STATE MACHINE) */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start md:self-center">
+        {/* CENTER SECTION: DETAIL RADAR NAVIGATION (DITEMPATKAN DITENGAH TANPA ELEMEN PEMBUNGKUS) */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="inline-flex items-center justify-center gap-2 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] transition-all cursor-pointer select-none py-1.5 px-3.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)]/60 self-center group active:scale-95"
+          aria-expanded={isExpanded}
+          title={isExpanded ? "Tutup detail radar" : "Buka grafik dan detail arus asing"}
+        >
+          <span>{isExpanded ? "Tutup Detail Radar" : "Detail Radar"}</span>
+          <Icon
+            icon={isExpanded ? "ph:caret-up-bold" : "ph:caret-down-bold"}
+            width="15"
+            className="transition-transform duration-200 text-[var(--md-sys-color-primary)] group-hover:translate-y-0.5"
+          />
+        </button>
+
+        {/* RIGHT SECTION: STATUS BADGE (STATE MACHINE) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start md:self-center shrink-0">
           {isLoading ? (
             <div className="w-36 h-9 bg-[var(--md-sys-color-surface-container-highest)] animate-pulse rounded-xl" />
           ) : (
@@ -215,28 +222,11 @@ export default function ForeignExodusRadar() {
             </span>
           )}
         </div>
-
-        {/* RIGHT SECTION: TOGGLE BUTTON (CHEVRON UP/DOWN) */}
-        <div className="flex items-center gap-2 self-end md:self-center">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs select-none"
-            aria-expanded={isExpanded}
-            title={isExpanded ? "Tutup detail radar" : "Buka grafik dan detail arus asing"}
-          >
-            <span>{isExpanded ? "Tutup Radar" : "Detail Radar"}</span>
-            <Icon
-              icon={isExpanded ? "ph:caret-up-bold" : "ph:caret-down-bold"}
-              width="14"
-              className="transition-transform duration-200"
-            />
-          </button>
-        </div>
       </div>
 
       {/* ====== COLLAPSIBLE DETAIL SECTION ====== */}
       {isExpanded && (
-        <div className="mt-4 pt-4 space-y-6 animate-fade-in">
+        <div className="mt-6 pt-6 border-t border-[var(--md-sys-color-outline-variant)]/60 space-y-6 animate-fade-in">
           
           {/* HEADER EXPLANATION */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
@@ -487,6 +477,17 @@ export default function ForeignExodusRadar() {
               </div>
             </div>
 
+          </div>
+
+          {/* BOTTOM COLLAPSE LINK */}
+          <div className="pt-2 flex justify-center">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] transition-all cursor-pointer select-none py-1.5 px-4 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)]/60 active:scale-95"
+            >
+              <span>Tutup Detail Radar</span>
+              <Icon icon="ph:caret-up-bold" width="14" className="text-[var(--md-sys-color-primary)]" />
+            </button>
           </div>
 
         </div>
