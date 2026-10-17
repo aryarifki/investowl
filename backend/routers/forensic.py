@@ -55,7 +55,8 @@ def _evaluate_market_state(timeline: List[Dict[str, Any]]) -> str:
     - NORMAL: Daily Net Flow > -1 Trillion IDR.
     - WARNING (Hidden Distribution): Cumulative 5-day Net Flow < -5 Trillion IDR, but IHSG drop < 3%.
     - CRASH (Forced Liquidation): Any single day where Daily Net Flow > 5 Trillion IDR (outflow).
-    - BOTTOMING (Capitulation): After a CRASH state, Daily Net Flow turns positive (buyback) for 2 consecutive days.
+    - BOTTOMING (Capitulation): After a CRASH state, 2 consecutive positive days with institutional conviction
+      (threshold >= max(1.0T, 3% * cumulative_exodus)) and either climactic absorption (>= 5.0T) or price stabilization.
     """
     if not timeline:
         return "NORMAL"
@@ -67,6 +68,7 @@ def _evaluate_market_state(timeline: List[Dict[str, Any]]) -> str:
 
     in_crash_mode = False
     consec_positive = 0
+    cumulative_exodus = 0.0
     state = "NORMAL"
 
     for i in range(len(timeline)):
@@ -80,27 +82,47 @@ def _evaluate_market_state(timeline: List[Dict[str, Any]]) -> str:
         base_ihsg = timeline[start_idx]["ihsg_close"]
         ihsg_drop_5d = ((ihsg - base_ihsg) / base_ihsg) * 100.0 if base_ihsg > 0 else 0.0
 
+        # Lacak akumulasi eksodus modal asing selama mode crash aktif
+        if flow <= (-5.0 * unit):
+            in_crash_mode = True
+            cumulative_exodus += flow
+        elif in_crash_mode and flow < 0:
+            cumulative_exodus += flow
+
         if flow > 0:
             consec_positive += 1
         else:
             consec_positive = 0
 
-        # Prioritas 1: CRASH (single day massive outflow > 5 unit)
+        # Prioritas 1: CRASH (single day massive outflow <= -5 unit)
         if flow <= (-5.0 * unit):
             state = "CRASH"
-            in_crash_mode = True
-        # Prioritas 2: BOTTOMING (buyback 2 hari berturut-turut setelah CRASH)
+        # Prioritas 2: BOTTOMING (setelah krisis, 2 hari positif dengan conviction & absorpsi/stabilisasi)
         elif in_crash_mode and consec_positive >= 2:
-            state = "BOTTOMING"
-            in_crash_mode = False
-        # Prioritas 3: WARNING (distribusi tersembunyi akumulasi 5 hari < -5 unit, penurunan IHSG < 3%)
+            prev_flow = timeline[i - 1]["daily_flow"]
+            conviction_thresh = max(1.0 * unit, 0.03 * abs(cumulative_exodus))
+            has_conviction = (flow >= conviction_thresh) or ((flow + prev_flow) >= 2.0 * conviction_thresh)
+
+            # Dual-path konfirmasi: Climactic Absorption (>= 5T) atau Price Stabilization (close >= prev * 0.99)
+            prev_ihsg = timeline[i - 1]["ihsg_close"]
+            is_climactic_absorption = flow >= (5.0 * unit)
+            price_stabilizing = (ihsg >= prev_ihsg * 0.99)
+
+            if has_conviction and (is_climactic_absorption or price_stabilizing):
+                state = "BOTTOMING"
+                in_crash_mode = False
+                cumulative_exodus = 0.0
+            else:
+                state = "CRASH"
+        elif in_crash_mode:
+            # Tetap terkunci di status CRASH selama krisis belum terkonfirmasi pulih
+            state = "CRASH"
+        # Prioritas 3: WARNING (distribusi tersembunyi akumulasi 5 hari <= -5 unit, penurunan IHSG < 3%)
         elif flow_5d <= (-5.0 * unit) and abs(ihsg_drop_5d) < 3.0:
             state = "WARNING"
         elif flow <= (-1.0 * unit):
             state = "WARNING"
         # Prioritas 4: NORMAL (Daily Net Flow > -1 unit)
-        elif flow > (-1.0 * unit):
-            state = "NORMAL"
         else:
             state = "NORMAL"
 
