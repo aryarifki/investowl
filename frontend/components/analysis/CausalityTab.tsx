@@ -10,16 +10,20 @@ interface CausalityProps {
   ticker: string;
   analysisDate: string;
   windowDays: number;
+  initialDetail?: any;
 }
 
-export default function CausalityTab({ ticker, analysisDate, windowDays }: CausalityProps) {
-  const url = `/api/bandar/causality/${ticker}?analysis_date=${analysisDate}&window_days=${windowDays}`;
-  const { data: causalityData, error, isLoading } = useSWR(url, fetcher, { refreshInterval: 0, revalidateOnFocus: false });
+export default function CausalityTab({ ticker, analysisDate, windowDays, initialDetail }: CausalityProps) {
+  const qs = "?window_days=" + windowDays + (analysisDate ? "&analysis_date=" + analysisDate : "");
+  const url = `/api/bandar/causality/${ticker}${qs}`;
+  const { data: causalityData, error, isLoading } = useSWR(ticker ? url : null, fetcher, { refreshInterval: 0, revalidateOnFocus: false });
 
-  const detailUrl = `/api/bandar/detail/${ticker}?analysis_date=${analysisDate}&window_days=${windowDays}&horizon=10`;
-  const { data: detailData } = useSWR(detailUrl, fetcher, { refreshInterval: 0, revalidateOnFocus: false });
+  // Gunakan initialDetail jika dioper dari page induk untuk menghemat 1 network roundtrip
+  const detailUrl = !initialDetail && ticker ? `/api/bandar/detail/${ticker}${qs}` : null;
+  const { data: fetchedDetail } = useSWR(detailUrl, fetcher, { refreshInterval: 0, revalidateOnFocus: false });
+  const detailData = initialDetail || fetchedDetail;
 
-  if (isLoading) return <div className="p-8 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] flex items-center justify-center gap-3 text-[var(--md-sys-color-on-surface-variant)] shadow-sm animate-pulse"><Icon icon="ph:spinner-gap-bold" className="animate-spin text-[var(--md-sys-color-primary)]" width="24" /> <span className="text-sm font-bold tracking-wide">Analyzing Granger causality matrix...</span></div>;
+  if (isLoading && !causalityData) return <div className="p-8 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] flex items-center justify-center gap-3 text-[var(--md-sys-color-on-surface-variant)] shadow-sm animate-pulse"><Icon icon="ph:spinner-gap-bold" className="animate-spin text-[var(--md-sys-color-primary)]" width="24" /> <span className="text-sm font-bold tracking-wide">Analyzing Granger causality matrix...</span></div>;
   if (error || !causalityData) return <div className="p-5 bg-[var(--md-sys-color-error-container)] border border-[var(--md-sys-color-error)] text-[var(--md-sys-color-on-error-container)] font-bold text-sm rounded-[24px] shadow-sm">Failed to load causality insights.</div>;
 
   const granger = causalityData.granger_test;

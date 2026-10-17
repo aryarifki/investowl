@@ -136,6 +136,27 @@ export default function TickerPage() {
     { refreshInterval: 60000, dedupingInterval: 30000 }
   );
 
+  // Smart background prefetching for remaining tabs when idle
+  useEffect(() => {
+    if (!activeTicker || isLoading || !data) return;
+
+    const timer = setTimeout(() => {
+      const qsBase = "?window_days=" + windowDays + (analysisDate ? "&analysis_date=" + analysisDate : "");
+      const urlsToPreload = [
+        "/api/bandar/broker-flow/" + activeTicker + qsBase + "&flow_mode=Cumulative&dist_mode=Date%20range",
+        "/api/bandar/causality/" + activeTicker + qsBase,
+        "/api/bandar/validation-v2/" + activeTicker + qsBase + "&horizon=" + horizon + "&min_events=" + minEvents + "&universe_mode=" + universe,
+        "/api/bandar/stocks/" + activeTicker + "/raw-tables" + qsBase,
+      ];
+
+      urlsToPreload.forEach((url) => {
+        fetch(url, { priority: "low" as any }).catch(() => {});
+      });
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [activeTicker, isLoading, data, windowDays, analysisDate, horizon, minEvents, universe]);
+
   if (!activeTicker) {
     return (
       <div className="min-h-screen bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center">
@@ -358,12 +379,18 @@ export default function TickerPage() {
         </div>
       </div>
 
-      {/* TAB CONTENT RENDERER */}
+      {/* TAB CONTENT RENDERER (KEEP-ALIVE STATE) */}
       <div className="transition-colors duration-200">
-        {activeTab === "Overview" && <OverviewTab data={data} isLoading={isLoading} />}
-        {activeTab === "Broker Flow" && <BrokerFlowTab ticker={activeTicker} analysisDate={analysisDate} windowDays={windowDays} />}
-        {activeTab === "Causality" && <CausalityTab ticker={activeTicker} analysisDate={analysisDate} windowDays={windowDays} />}
-        {activeTab === "Validation" && (
+        <div className={activeTab === "Overview" ? "block" : "hidden"}>
+          <OverviewTab data={data} isLoading={isLoading} />
+        </div>
+        <div className={activeTab === "Broker Flow" ? "block" : "hidden"}>
+          <BrokerFlowTab ticker={activeTicker} analysisDate={analysisDate} windowDays={windowDays} />
+        </div>
+        <div className={activeTab === "Causality" ? "block" : "hidden"}>
+          <CausalityTab ticker={activeTicker} analysisDate={analysisDate} windowDays={windowDays} initialDetail={data} />
+        </div>
+        <div className={activeTab === "Validation" ? "block" : "hidden"}>
           <ValidationTab
             ticker={activeTicker}
             analysisDate={analysisDate}
@@ -372,10 +399,10 @@ export default function TickerPage() {
             horizon={horizon}
             minEvents={minEvents}
           />
-        )}
-        {activeTab === "Raw Tables" && (
+        </div>
+        <div className={activeTab === "Raw Tables" ? "block" : "hidden"}>
           <RawTablesTab ticker={activeTicker} analysisDate={analysisDate} windowDays={windowDays} />
-        )}
+        </div>
       </div>
     </div>
   );

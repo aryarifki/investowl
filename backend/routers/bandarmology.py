@@ -1412,25 +1412,21 @@ def validation_insight_v2(
     from idx_bandarmology import analysis
     import pandas as pd
 
-    try:
-        try:
-            from idx_bandarmology.universe import get_universe
-            universe_tickers = get_dynamic_universe(universe_mode)
-        except Exception:
-            universe_tickers = ["ANTM", "GOTO", "BBCA", "BMRI", "BBRI", "BBNI", "ASII", "TLKM", "BREN", "AMMN"]
-        
-        if ticker not in universe_tickers:
-            universe_tickers.append(ticker)
+    ticker = ticker.upper().strip()
+    if analysis_date and not str(analysis_date).strip():
+        analysis_date = None
 
-        scan_df = analysis.broker_alpha_scan(
-            universe_tickers,
+    try:
+        # 1. Targeted Ticker Alpha Scan (Ultra Fast ~0.2s - 0.5s)
+        scan_df_ticker = analysis.broker_alpha_scan(
+            [ticker],
             horizon=horizon,
             min_events=min_events,
             min_net_value=min_net_buy * 1e9,
             group_by=("ticker", "broker_code")
         )
-        scan_rows_all = scan_df.to_dict("records") if not scan_df.empty else []
-        scan_rows_ticker = scan_df[scan_df["ticker"] == ticker].to_dict("records") if not scan_df.empty else []
+        scan_rows_ticker = scan_df_ticker.to_dict("records") if not scan_df_ticker.empty else []
+        scan_rows_all = scan_rows_ticker
     except Exception:
         scan_rows_all = []
         scan_rows_ticker = []
@@ -1661,12 +1657,28 @@ def smart_screener(
 
 
 @router.get("/stocks/{ticker}/raw-tables")
+@cached(ttl_seconds=1800, prefix="bandar_rawtables")
 def get_raw_tables(ticker: str, analysis_date: str = None, window_days: int = 20):
     import pandas as pd
     from idx_bandarmology import storage
     
-    ticker = ticker.upper()
-    analysis_ts = pd.Timestamp(analysis_date) if analysis_date else pd.Timestamp.today()
+    ticker = ticker.upper().strip()
+    if analysis_date and str(analysis_date).strip():
+        analysis_ts = pd.Timestamp(analysis_date)
+    else:
+        try:
+            from sqlalchemy import text
+            with storage.engine.connect() as conn:
+                max_d = conn.execute(
+                    text("SELECT MAX(date) FROM broker_activity WHERE ticker = :ticker"), 
+                    {"ticker": ticker}
+                ).scalar()
+            analysis_ts = pd.Timestamp(max_d) if max_d else pd.Timestamp.now()
+        except Exception:
+            analysis_ts = pd.Timestamp.now()
+
+    fetch_start = (analysis_ts - pd.Timedelta(days=window_days + 14)).date()
+    fetch_end = analysis_ts.date()
     window_start = analysis_ts - pd.Timedelta(days=window_days)
     
     def _clean_date(d):
@@ -1674,7 +1686,7 @@ def get_raw_tables(ticker: str, analysis_date: str = None, window_days: int = 20
 
     flow_list = []
     try:
-        flow_df = storage.read_broker_flow([ticker])
+        flow_df = storage.read_broker_flow([ticker], start_date=fetch_start, end_date=fetch_end)
         flow_df = flow_df[(flow_df["date"] >= window_start) & (flow_df["date"] <= analysis_ts)].sort_values("date", ascending=False)
         for _, r in flow_df.iterrows():
             signal = str(r.get("bandar_signal", "NEUTRAL")).replace("_", " ").title()
@@ -1694,7 +1706,7 @@ def get_raw_tables(ticker: str, analysis_date: str = None, window_days: int = 20
         
     act_list = []
     try:
-        act_df = storage.read_broker_activity([ticker])
+        act_df = storage.read_broker_activity([ticker], start_date=fetch_start, end_date=fetch_end)
         act_df = act_df[(act_df["date"] >= window_start) & (act_df["date"] <= analysis_ts)].copy()
         
         act_df["_gross"] = act_df["buy_value"].fillna(0) + act_df["sell_value"].fillna(0)

@@ -17,7 +17,8 @@ export default function RawTablesTab({ ticker, analysisDate, windowDays }: RawTa
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 100;
 
-  const url = `/api/bandar/stocks/${ticker}/raw-tables?analysis_date=${analysisDate}&window_days=${windowDays}`;
+  const qs = "?window_days=" + windowDays + (analysisDate ? "&analysis_date=" + analysisDate : "");
+  const url = ticker ? `/api/bandar/stocks/${ticker}/raw-tables${qs}` : null;
   const { data, error, isLoading, isValidating, mutate } = useSWR(url, fetcher, { revalidateOnFocus: false });
 
   if (isLoading && !data) return <div className="p-8 border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] flex items-center justify-center gap-3 text-[var(--md-sys-color-on-surface-variant)] shadow-sm animate-pulse"><Icon icon="ph:spinner-gap-bold" className="animate-spin text-[var(--md-sys-color-primary)]" width="24" /> <span className="text-sm font-bold tracking-wide">Extracting raw database records...</span></div>;

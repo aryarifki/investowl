@@ -20,12 +20,12 @@ export default function ValidationTab({ ticker, analysisDate, windowDays, univer
   const [scanMode, setScanMode] = useState<"ticker" | "all">("ticker");
   const [showIndividual, setShowIndividual] = useState(false);
 
-  const url = "/api/bandar/validation-v2/" + ticker + 
-              "?analysis_date=" + analysisDate + 
-              "&window_days=" + windowDays + 
-              "&horizon=" + horizon + 
-              "&min_events=" + minEvents + 
-              "&universe_mode=" + universeMode;
+  const qs = "?window_days=" + windowDays + 
+             (analysisDate ? "&analysis_date=" + analysisDate : "") + 
+             "&horizon=" + horizon + 
+             "&min_events=" + minEvents + 
+             "&universe_mode=" + universeMode;
+  const url = ticker ? "/api/bandar/validation-v2/" + ticker + qs : null;
               
   const { data, error, isLoading } = useSWR(url, fetcher, { refreshInterval: 0, revalidateOnFocus: false });
 

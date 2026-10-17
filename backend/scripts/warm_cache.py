@@ -75,9 +75,10 @@ def run_warmup(verbose: bool = True) -> dict[str, int]:
 
     for ticker in tickers:
         urls.append(f"/api/bandar/detail/{ticker}?window_days=20")
-        urls.append(f"/api/bandar/broker-flow/{ticker}?window_days=20&flow_mode=Cumulative")
+        urls.append(f"/api/bandar/broker-flow/{ticker}?window_days=20&flow_mode=Cumulative&dist_mode=Date%20range")
         urls.append(f"/api/bandar/causality/{ticker}?window_days=20")
-        urls.append(f"/api/bandar/validation-v2/{ticker}?window_days=60&horizon=10&min_events=5&universe_mode=watchlist")
+        urls.append(f"/api/bandar/validation-v2/{ticker}?window_days=20&horizon=10&min_events=5&universe_mode=watchlist")
+        urls.append(f"/api/bandar/stocks/{ticker}/raw-tables?window_days=20")
         urls.append(f"/api/bandar/dates/{ticker}")
 
     success_count = 0

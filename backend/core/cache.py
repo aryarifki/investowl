@@ -252,10 +252,21 @@ def _is_cacheable_arg(v: Any) -> bool:
     return False
 
 
+def _normalize_arg(v: Any) -> Any:
+    """Menormalisasi nilai argumen (string kosong/whitespace dinormalisasi menjadi None agar deterministik)."""
+    if isinstance(v, str) and not v.strip():
+        return None
+    if isinstance(v, list):
+        return [_normalize_arg(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _normalize_arg(val) for k, val in v.items()}
+    return v
+
+
 def build_cache_key(prefix: str, func_name: str, args: tuple, kwargs: dict) -> str:
     """Membangun cache key deterministik berbasis hash SHA-256 dari argumen request."""
-    clean_args = [a for a in args if _is_cacheable_arg(a)]
-    clean_kwargs = {k: v for k, v in sorted(kwargs.items()) if _is_cacheable_arg(v)}
+    clean_args = [_normalize_arg(a) for a in args if _is_cacheable_arg(a)]
+    clean_kwargs = {k: _normalize_arg(v) for k, v in sorted(kwargs.items()) if _is_cacheable_arg(v)}
     serialized = json.dumps({"args": clean_args, "kwargs": clean_kwargs}, sort_keys=True, default=str)
     digest = hashlib.sha256(serialized.encode()).hexdigest()[:12]
     p = f"{prefix}:" if prefix else ""

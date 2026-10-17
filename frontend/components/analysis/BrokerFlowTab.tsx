@@ -77,15 +77,15 @@ export default function BrokerFlowTab({ ticker, analysisDate, windowDays }: { ti
   const distStart = customDistStart ?? defaultDistStart;
   const distEnd = customDistEnd ?? defaultDistEnd;
 
-  const qs = "?window_days=" + windowDays + 
-             (analysisDate ? "&analysis_date=" + analysisDate : "") + 
-             "&flow_mode=" + flowMode + 
-             "&dist_mode=" + encodeURIComponent(distMode) + 
-             "&dist_date=" + distDate + 
-             "&dist_start=" + distStart + 
-             "&dist_end=" + distEnd + 
-             (selectedCodes.length > 0 ? "&broker_codes=" + selectedCodes.join(",") : "");
-             
+  let qs = "?window_days=" + windowDays;
+  if (analysisDate) qs += "&analysis_date=" + analysisDate;
+  if (flowMode) qs += "&flow_mode=" + flowMode;
+  if (distMode) qs += "&dist_mode=" + encodeURIComponent(distMode);
+  if (distDate) qs += "&dist_date=" + distDate;
+  if (distStart) qs += "&dist_start=" + distStart;
+  if (distEnd) qs += "&dist_end=" + distEnd;
+  if (selectedCodes.length > 0) qs += "&broker_codes=" + selectedCodes.join(",");
+              
   const { data, error, isLoading, isValidating } = useSWR(
     ticker ? "/api/bandar/broker-flow/" + ticker + qs : null,
     fetcher,
