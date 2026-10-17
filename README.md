@@ -93,6 +93,15 @@ Platform ini mengintegrasikan model matematika kuantitatif (*Greedy Matching* co
 - **🤖 Integrasi Telegram AI Assistant & Mobile Command Center**:
   - Seluruh fitur utama Investowl (sinyal harian, screener akumulasi smart money, detail emiten, pergerakan broker whale, dan rotasi sektor) kini dapat diakses langsung via bot Telegram (`@IDXadryanBot`).
   - Ditenagai oleh Google Gemini AI dengan pemanggilan tool nyata (*Function Calling*) ke backend FastAPI (`http://localhost:8001`) dan database PostgreSQL, multi-model failover otomatis, dan memori percakapan berlanjut (*multi-turn session*).
+- **🏛️ Deteksi Relasi Afiliasi Broker & Pengendali (Governance Breadcrumb Engine)**:
+  - Deteksi otomatis hubungan tata kelola antara broker pelaksana dan emiten yang dianalisis: kesamaan pengendali, komisaris/direksi terafiliasi, kesamaan alamat kantor pusat, atau kepemilikan saham signifikan (misal: Broker II / Danatama Makmur Sekuritas pada emiten BULL, SQ pada BBCA, LG pada ADRO/ESSA/MBMA, EP pada konglomerasi MNC, CC/NI/OD pada perbankan BUMN).
+  - Menyajikan *observational research hypothesis* langsung pada header detail dan tabel broker tanpa tuduhan insider trading.
+- **📡 Foreign Exodus Radar (Crash Absorption State Machine v2.5)**:
+  - Algoritma pelacak krisis aliran modal asing makro IHSG berbasis state machine 4-fase: `NORMAL`, `EXODUS_WARNING`, `CRASH`, dan `BOTTOMING`.
+  - Dilengkapi *conviction threshold* adaptif (1T single-day atau 2T kumulatif) dan filter stabilisasi harga (*price stabilization*) untuk membedakan *climactic absorption* sejati dari jebakan *dead-cat bounce*.
+- **⚡ Two-Tier Cache Architecture (Memory L1 + Redis L2) & Cloudflare Edge Sync**:
+  - Lapisan caching thread-safe hibrida (Memory LRU 0ms + Redis persistent L2) dengan injeksi otomatis header HTTP `Cache-Control: public, max-age=30, s-maxage=1800, stale-while-revalidate=30`.
+  - Terintegrasi penuh dengan Cloudflare Edge CDN (`avenia.my.id`), dilengkapi auto-flush webhook pasca-pipeline nightly ETL untuk menjamin sinkronisasi data seketika.
 
 ---
 
@@ -460,7 +469,12 @@ investowl/
 | `POST`| `/api/v1/auth/approve/{id}`| `auth.py` | Menyetujui akses akun pengguna (Khusus Admin). |
 | `GET` | `/api/users/{email}/watchlist`| `auth.py` | Mengambil daftar pantau emiten (*watchlist*) milik user. |
 | `PUT` | `/api/users/{email}/watchlist`| `auth.py` | Menyimpan/memperbarui daftar pantau emiten (*watchlist*) milik user. |
-| `GET` | `/api/bandar/detail/{ticker}`| `bandarmology.py` | Analitik bandarmologi lengkap (Broker summary, Top-N). |
+| `GET` | `/api/bandar/detail/{ticker}`| `bandarmology.py` | Analitik bandarmologi lengkap, deteksi broker afiliasi/insider, top-N broker summary, dan profil flow. |
+| `GET` | `/api/bandar/broker-flow/{ticker}`| `bandarmology.py` | Komparasi aliran dana multi-broker kumulatif dan rekonstruksi distribusi counterparty. |
+| `GET` | `/api/bandar/causality/{ticker}`| `bandarmology.py` | Uji statistik Granger causality (lead/lag foreign flow vs pergerakan harga) dengan caching 1800s. |
+| `GET` | `/api/bandar/validation-v2/{ticker}`| `bandarmology.py` | Broker forward return alpha scan (win rate, mean return, one-sided p-value) & accumulation event study. |
+| `POST`| `/api/bandar/clear-cache` | `bandarmology.py` | Invalidasi seluruh cache memory L1 + Redis L2 dan trigger Cloudflare Edge purge secara otomatis. |
+| `GET` | `/api/forensic/foreign-exodus` | `forensic.py` | Foreign Exodus Radar State Machine (fase Normal, Warning, Crash, Bottoming) & timeline IHSG vs foreign flow. |
 | `GET` | `/api/broker-flow/whales` | `broker.py` | Daftar broker aktif dan klasifikasi taksonomi (Smart Foreign, Bandar, dsb). |
 | `GET` | `/api/broker-flow/whales/{code}` | `broker.py` | Akumulasi dan distribusi bersih broker spesifik beserta estimasi average price. |
 | `GET` | `/api/signal/daily` | `signal.py` | Mengambil daftar sinyal kuantitatif harian teratas beserta skor multi-faktor dan metrik AI lengkap (`ml_win_prob`, `ml_label`, `ai_pred_mae`, `ai_pred_mfe`, `kelly_alloc`). |

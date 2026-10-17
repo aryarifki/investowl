@@ -34,7 +34,13 @@ from services.bandarmology_service import (
     brokerflow_cache,
     screener_cache,
 )
-from core.cache import cached
+from core.cache import cached, invalidate_cache, purge_cloudflare_cache
+from services.affiliation_service import (
+    enrich_broker_summary_affiliations,
+    detect_window_affiliations,
+    get_broker_affiliation,
+    get_broker_info,
+)
 
 router = APIRouter(prefix="/api/bandar", tags=["bandarmology"])
 
@@ -721,23 +727,36 @@ def ticker_detail(
     import time as _time
     ticker = ticker.upper().strip()
 
-    activity_df = storage.read_broker_activity([ticker]).copy()
-    if activity_df.empty:
-        return {"error": "No broker history for " + ticker}
-
     if analysis_date:
         analysis_ts = pd.Timestamp(analysis_date)
     else:
-        dates = sorted(activity_df[activity_df["ticker"] == ticker]["date"].dt.date.unique().tolist())
-        analysis_ts = pd.Timestamp(max(dates)) if dates else pd.Timestamp.now()
+        try:
+            from sqlalchemy import text
+            with storage.engine.connect() as conn:
+                max_d = conn.execute(
+                    text("SELECT MAX(date) FROM broker_activity WHERE ticker = :ticker"), 
+                    {"ticker": ticker}
+                ).scalar()
+            analysis_ts = pd.Timestamp(max_d) if max_d else pd.Timestamp.now()
+        except Exception:
+            analysis_ts = pd.Timestamp.now()
 
     cache_key = f"{ticker}|{analysis_ts.date()}|{window_days}|{horizon}|v2"
     cached = detail_cache.get(cache_key)
     if cached is not None:
         return cached
 
-    price_df = storage.read_prices([ticker]).copy()
-    broker_df = storage.read_broker_flow([ticker]).copy()
+    # Pushdown SQL: load only relevant timeframes with safe lookback buffer
+    fetch_start = (analysis_ts - pd.Timedelta(days=max(window_days + 60, 180))).date()
+    fetch_end = analysis_ts.date()
+
+    activity_df = storage.read_broker_activity([ticker], start_date=fetch_start, end_date=fetch_end).copy()
+    if activity_df.empty:
+        return {"error": "No broker history for " + ticker}
+
+    price_start = (analysis_ts - pd.Timedelta(days=max(window_days + 90, 240))).date()
+    price_df = storage.read_prices([ticker], start_date=price_start, end_date=fetch_end).copy()
+    broker_df = storage.read_broker_flow([ticker], start_date=fetch_start, end_date=fetch_end).copy()
 
     if broker_df.empty:
         return {"error": "No broker history for " + ticker}
@@ -809,6 +828,10 @@ def ticker_detail(
                 "net": float(row["net_value"]),
                 "spark": _sparkline_values(activity_df, row["broker_code"], analysis_ts),
             })
+
+    # Enrich dengan engine deteksi afiliasi broker & insider governance
+    broker_summary_rows, _ = enrich_broker_summary_affiliations(ticker, broker_summary_rows)
+    affiliated_detected = detect_window_affiliations(ticker, activity_window)
 
     try:
         perf = analysis.price_performance_table(ticker, price_df=price_df)
@@ -885,6 +908,7 @@ def ticker_detail(
         "alerts": alerts,
         "verdict": verdict,
         "broker_summary": broker_summary_rows,
+        "affiliated_brokers_detected": affiliated_detected,
         "price_performance": perf_rows,
         "profile_flow": profile_rows,
         "profile_broker_detail": _profile_broker_detail_table(activity_window),
@@ -1066,6 +1090,7 @@ def _broker_summary_table(dist_data):
 
 # ================= FIX UTAMA ADA DI SINI =================
 @router.get("/broker-flow/{ticker}")
+@cached(ttl_seconds=1800, prefix="bandar_brokerflow")
 def broker_flow_detail(
     ticker: str,
     analysis_date: str = None,
@@ -1080,21 +1105,42 @@ def broker_flow_detail(
 ):
     import time as _time
     ticker = ticker.upper().strip()
-    activity_df = storage.read_broker_activity([ticker]).copy()
-
-    if activity_df.empty:
-        return {"error": "No broker history for " + ticker}
 
     if analysis_date:
         analysis_ts = pd.Timestamp(analysis_date)
     else:
-        dates = sorted(activity_df[activity_df["ticker"] == ticker]["date"].dt.date.unique().tolist())
-        analysis_ts = pd.Timestamp(max(dates)) if dates else pd.Timestamp.now()
+        try:
+            from sqlalchemy import text
+            with storage.engine.connect() as conn:
+                max_d = conn.execute(
+                    text("SELECT MAX(date) FROM broker_activity WHERE ticker = :ticker"), 
+                    {"ticker": ticker}
+                ).scalar()
+            analysis_ts = pd.Timestamp(max_d) if max_d else pd.Timestamp.now()
+        except Exception:
+            analysis_ts = pd.Timestamp.now()
 
     cache_key = f"{ticker}|{analysis_ts.date()}|{window_days}|{broker_codes}|{flow_mode}|{dist_mode}|{dist_start}|{dist_end}"
     cached = brokerflow_cache.get(cache_key)
     if cached is not None:
         return cached
+
+    # Pushdown SQL: load only relevant timeframes with safe lookback buffer
+    lookback_days = max(window_days + 60, 180)
+    fetch_start = (analysis_ts - pd.Timedelta(days=lookback_days)).date()
+    fetch_end = analysis_ts.date()
+    if dist_start:
+        try:
+            ds = pd.Timestamp(dist_start).date()
+            if ds < fetch_start:
+                fetch_start = ds
+        except Exception:
+            pass
+
+    activity_df = storage.read_broker_activity([ticker], start_date=fetch_start, end_date=fetch_end).copy()
+
+    if activity_df.empty:
+        return {"error": "No broker history for " + ticker}
 
     # Data Window Induk (Untuk Grafik)
     window_start = analysis_ts - pd.Timedelta(days=window_days)
@@ -1203,6 +1249,7 @@ def broker_flow_detail(
     return result
 
 @router.get("/causality/{ticker}")
+@cached(ttl_seconds=1800, prefix="bandar_causality")
 def causality_insight(ticker: str, analysis_date: str = None, window_days: int = None):
     from idx_bandarmology import analysis
     import pandas as pd
@@ -1259,6 +1306,7 @@ def causality_insight(ticker: str, analysis_date: str = None, window_days: int =
     return _clean(raw_response)
 
 @router.get("/validation/{ticker}")
+@cached(ttl_seconds=1800, prefix="bandar_validation")
 def validation_insight(
     ticker: str,
     analysis_date: str = None,
@@ -1352,6 +1400,7 @@ def validation_insight(
     return _clean(raw_response)
 
 @router.get("/validation-v2/{ticker}")
+@cached(ttl_seconds=1800, prefix="bandar_validation")
 def validation_insight_v2(
     ticker: str,
     analysis_date: str = None,
@@ -1668,3 +1717,32 @@ def get_raw_tables(ticker: str, analysis_date: str = None, window_days: int = 20
         pass
         
     return {"flow": flow_list, "activity": act_list}
+
+
+# ══════════════════════════════════════════════════════════
+# Cache Invalidation & Cloudflare Edge Sync
+# ══════════════════════════════════════════════════════════
+
+@router.post("/clear-cache")
+@router.get("/refresh-cache")
+def clear_bandarmology_cache(purge_cloudflare: bool = True):
+    """Membersihkan seluruh cache bandarmology (Memory L1 + Redis L2) dan sinkronisasi Cloudflare Edge."""
+    detail_cache.clear()
+    brokerflow_cache.clear()
+    summary_cache.clear()
+    screener_cache.clear()
+
+    # Invalidate semua Redis keys berawalan 'bandar*'
+    cleared_redis = invalidate_cache("bandar*")
+
+    cf_result = None
+    if purge_cloudflare:
+        cf_result = purge_cloudflare_cache()
+
+    return {
+        "status": "ok",
+        "message": "Bandarmology cache cleared successfully and synchronized with Cloudflare Edge.",
+        "cleared_redis_keys": cleared_redis,
+        "cloudflare_sync": cf_result,
+    }
+

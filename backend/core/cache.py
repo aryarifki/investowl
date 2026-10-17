@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import time
 import json
+import os
 import inspect
 import hashlib
 import fnmatch
 from collections import OrderedDict
 from threading import Lock
 from functools import wraps
-from typing import Any, Optional, Callable
-
+from typing import Any, Optional, Callable, List, Dict
 import redis
 from fastapi.responses import JSONResponse, Response
 from fastapi.encoders import jsonable_encoder
@@ -400,3 +400,61 @@ def cached(
 def invalidate_cache(pattern: str = "*") -> int:
     """Helper global untuk menghapus cache berdasarkan pola wildcard (misal 'signal:*')."""
     return cache.invalidate_by_pattern(pattern)
+
+
+def purge_cloudflare_cache(
+    zone_id: Optional[str] = None, 
+    hosts: Optional[List[str]] = None, 
+    purge_everything: bool = False
+) -> Dict[str, Any]:
+    """Mengirim sinyal purge cache ke Cloudflare Edge API agar sinkron dengan Redis & backend."""
+    import urllib.request
+
+    token = os.getenv("CLOUDFLARE_API_TOKEN")
+    zid = zone_id or os.getenv("CLOUDFLARE_ZONE_ID")
+
+    if not token or not zid:
+        # Check /root/.cloudflare_credentials fallback
+        cred_path = "/root/.cloudflare_credentials"
+        if os.path.exists(cred_path):
+            try:
+                with open(cred_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("CLOUDFLARE_API_TOKEN=") and not token:
+                            token = line.split("=", 1)[1].strip()
+                        elif line.startswith("CLOUDFLARE_ZONE_ID=") and not zid:
+                            zid = line.split("=", 1)[1].strip()
+            except Exception:
+                pass
+
+    if not zid:
+        zid = "fea480d7c87de02bcab4459efbb103b6"
+
+    if not token or not zid:
+        return {"success": False, "reason": "No Cloudflare credentials found"}
+
+    url = f"https://api.cloudflare.com/client/v4/zones/{zid}/purge_cache"
+    if purge_everything:
+        body = {"purge_everything": True}
+    else:
+        target_hosts = hosts or ["investowl.avenia.my.id", "avenia.my.id", "www.avenia.my.id"]
+        body = {"hosts": target_hosts}
+
+    try:
+        payload = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+            return {"success": data.get("success", False), "result": data.get("result")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+

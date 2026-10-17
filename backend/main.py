@@ -29,7 +29,9 @@ try:
         host=settings.REDIS_HOST, 
         port=settings.REDIS_PORT, 
         db=settings.REDIS_DB, 
-        decode_responses=True
+        decode_responses=True,
+        socket_timeout=2.0,
+        socket_connect_timeout=2.0,
     )
     redis_client.ping()
 except Exception:
