@@ -168,6 +168,10 @@ export default function HomePage() {
 
         {/* HORIZONTAL SOCIAL MEDIA LINKS WITH "Connect with me" */}
         <div className="flex items-center gap-2.5 px-1.5 -mt-3 sm:-mt-2">
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] select-none">
+            Connect with me
+          </span>
+
           <div className="flex items-center gap-2">
             <a
               href="mailto:adryanrifky716@gmail.com"
@@ -204,10 +208,6 @@ export default function HomePage() {
               <Icon icon="ph:github-logo-duotone" width="16" />
             </a>
           </div>
-
-          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] select-none">
-            Connect with me
-          </span>
         </div>
 
         {/* WATCHLIST & SCANNER SECTION */}
