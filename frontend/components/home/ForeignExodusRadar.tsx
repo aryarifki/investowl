@@ -135,15 +135,34 @@ export default function ForeignExodusRadar() {
     }
   };
 
+  const syncDateFormatted = useMemo(() => {
+    if (!timeline.length) return "";
+    const lastDate = timeline[timeline.length - 1]?.date;
+    if (!lastDate) return "";
+    try {
+      const parts = lastDate.split("-");
+      if (parts.length === 3) {
+        const months = [
+          "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+          "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+        return `${parseInt(parts[2], 10)} ${months[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+      }
+      return lastDate;
+    } catch {
+      return lastDate;
+    }
+  }, [timeline]);
+
   return (
     <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/70 rounded-3xl p-5 sm:p-6 shadow-xs transition-all relative overflow-hidden">
       
       {/* ====== ALWAYS VISIBLE: MAIN CARD HEADER ====== */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3.5">
         
-        {/* LEFT SECTION: IHSG REAL-TIME/CLOSING PRICE */}
-        <div className="flex items-center gap-3.5 shrink-0">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] flex items-center justify-center shrink-0 border border-[var(--md-sys-color-outline-variant)] shadow-2xs">
+        {/* OVERVIEW INDEX */}
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] flex items-center justify-center shrink-0 border border-[var(--md-sys-color-outline-variant)] shadow-2xs mt-0.5 sm:mt-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" className="animate-spin-slow text-[var(--md-sys-color-primary)]">
               <g fill="currentColor">
                 <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" opacity=".35" />
@@ -181,43 +200,38 @@ export default function ForeignExodusRadar() {
                 </span>
               )}
             </div>
+
+            {/* SYNC DATA REAL-TIME TERBARU DARI DATABASE */}
+            {isLoading ? (
+              <div className="w-28 h-3.5 bg-[var(--md-sys-color-surface-container-highest)] animate-pulse rounded mt-1.5" />
+            ) : syncDateFormatted ? (
+              <div className="text-[10px] sm:text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface-variant)] mt-1 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500/80 animate-pulse shrink-0" />
+                <span>sync : {syncDateFormatted}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        {/* CENTER SECTION: DETAIL RADAR NAVIGATION (DITEMPATKAN DITENGAH TANPA ELEMEN PEMBUNGKUS) */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="inline-flex items-center justify-center gap-2 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] transition-all cursor-pointer select-none py-1.5 px-3.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)]/60 self-center group active:scale-95"
-          aria-expanded={isExpanded}
-          title={isExpanded ? "Tutup detail radar" : "Buka grafik dan detail arus asing"}
-        >
-          <span>{isExpanded ? "Tutup Detail Radar" : "Detail Radar"}</span>
-          <Icon
-            icon={isExpanded ? "ph:caret-up-bold" : "ph:caret-down-bold"}
-            width="15"
-            className="transition-transform duration-200 text-[var(--md-sys-color-primary)] group-hover:translate-y-0.5"
-          />
-        </button>
-
-        {/* RIGHT SECTION: STATUS BADGE (STATE MACHINE) */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start md:self-center shrink-0">
+        {/* STATUS IHSG (DIBAWAH OVERVIEW INDEX, TANPA TEKS "STATUS") */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
           {isLoading ? (
-            <div className="w-36 h-9 bg-[var(--md-sys-color-surface-container-highest)] animate-pulse rounded-xl" />
+            <div className="w-32 h-8 bg-[var(--md-sys-color-surface-container-highest)] animate-pulse rounded-xl" />
           ) : (
             <div
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono font-extrabold tracking-wider transition-all ${stateConfig.badgeClass} ${stateConfig.glowClass}`}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-extrabold tracking-wider transition-all ${stateConfig.badgeClass} ${stateConfig.glowClass}`}
             >
               <span className="relative flex h-2 w-2">
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${stateConfig.dotClass}`}></span>
                 <span className={`relative inline-flex rounded-full h-2 w-2 ${stateConfig.dotClass}`}></span>
               </span>
               <Icon icon={stateConfig.icon} width="16" />
-              <span>STATUS: {stateConfig.label}</span>
+              <span>{stateConfig.label}</span>
             </div>
           )}
 
           {!isLoading && (
-            <span className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)] hidden lg:inline">
+            <span className="text-[11px] font-medium text-[var(--md-sys-color-on-surface-variant)]">
               {stateConfig.sublabel}
             </span>
           )}
@@ -479,19 +493,25 @@ export default function ForeignExodusRadar() {
 
           </div>
 
-          {/* BOTTOM COLLAPSE LINK */}
-          <div className="pt-2 flex justify-center">
-            <button
-              onClick={() => setIsExpanded(false)}
-              className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] transition-all cursor-pointer select-none py-1.5 px-4 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)]/60 active:scale-95"
-            >
-              <span>Tutup Detail Radar</span>
-              <Icon icon="ph:caret-up-bold" width="14" className="text-[var(--md-sys-color-primary)]" />
-            </button>
-          </div>
-
         </div>
       )}
+
+      {/* ====== BOTTOM NAVIGATION: DETAIL RADAR TOGGLE (DI BAGIAN PALING BAWAH CARD) ====== */}
+      <div className="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)]/40 flex justify-center">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="inline-flex items-center justify-center gap-2 text-xs font-mono font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] transition-all cursor-pointer select-none py-1.5 px-4 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)]/60 active:scale-95 group"
+          aria-expanded={isExpanded}
+          title={isExpanded ? "Tutup detail radar" : "Buka grafik dan detail arus asing"}
+        >
+          <span>{isExpanded ? "Tutup Detail Radar" : "Detail Radar"}</span>
+          <Icon
+            icon={isExpanded ? "ph:caret-up-bold" : "ph:caret-down-bold"}
+            width="15"
+            className="transition-transform duration-200 text-[var(--md-sys-color-primary)] group-hover:translate-y-0.5"
+          />
+        </button>
+      </div>
 
     </section>
   );

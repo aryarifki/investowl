@@ -119,43 +119,6 @@ export default function HomePage() {
     }
   }, [setLocalWatchlist, session?.user?.email]);
 
-  const { data: statusData } = useSWR("/api/bandar/system-status", fetcher, {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5000,
-  });
-  const { data: dateData } = useSWR("/api/bandar/dates/BBCA", fetcher, {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5000,
-  });
-
-  const latestDate = useMemo(() => {
-    if (statusData?.latest_date && statusData.latest_date !== "-") {
-      return statusData.latest_date;
-    }
-    if (dateData?.dates && dateData.dates.length > 0) {
-      return dateData.dates[dateData.dates.length - 1];
-    }
-    return "ONLINE";
-  }, [statusData?.latest_date, dateData?.dates]);
-
-  const formattedDate = useMemo(() => {
-    if (!latestDate || latestDate === "ONLINE") return "Data Terkini";
-    try {
-      const parts = latestDate.split("-");
-      if (parts.length === 3) {
-        const [y, m, d] = parts;
-        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-        const monthName = months[parseInt(m, 10) - 1] || m;
-        return `${parseInt(d, 10)} ${monthName} ${y}`;
-      }
-      return latestDate;
-    } catch {
-      return latestDate;
-    }
-  }, [latestDate]);
-
   const { data: universeData } = useSWR("/api/bandar/universe/all", fetcher, { revalidateOnFocus: false });
   const allTickers = useMemo(() => (universeData?.tickers as string[]) || [], [universeData?.tickers]);
 
@@ -203,15 +166,8 @@ export default function HomePage() {
         {/* FOREIGN EXODUS RADAR */}
         <ForeignExodusRadar />
 
-        {/* HORIZONTAL SOCIAL MEDIA & MARKET INFO BAR */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1.5 -mt-3 sm:-mt-2">
-          <div className="flex items-center gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)]"></span>
-            <span className="font-semibold text-[var(--md-sys-color-on-surface)]">InvestOwl Terminal</span>
-            <span className="opacity-40">•</span>
-            <span>Data Terkini: <strong className="font-mono text-[var(--md-sys-color-on-surface)]">{formattedDate}</strong></span>
-          </div>
-
+        {/* HORIZONTAL SOCIAL MEDIA LINKS WITH "Connect with me" */}
+        <div className="flex items-center gap-2.5 px-1.5 -mt-3 sm:-mt-2">
           <div className="flex items-center gap-2">
             <a
               href="mailto:adryanrifky716@gmail.com"
@@ -248,6 +204,10 @@ export default function HomePage() {
               <Icon icon="ph:github-logo-duotone" width="16" />
             </a>
           </div>
+
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] select-none">
+            Connect with me
+          </span>
         </div>
 
         {/* WATCHLIST & SCANNER SECTION */}
