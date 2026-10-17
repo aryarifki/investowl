@@ -136,10 +136,18 @@ export default function ForeignExodusRadar() {
   };
 
   return (
-    <section className="bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)]/70 rounded-3xl p-5 sm:p-6 shadow-xs transition-all relative overflow-hidden">
+    <section className={`sticky top-[3.75rem] z-30 bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-md transition-all duration-300 relative ${
+      isExpanded 
+        ? "max-h-[calc(100vh-8.5rem)] md:max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin" 
+        : "overflow-hidden"
+    }`}>
       
       {/* ====== ALWAYS VISIBLE: MAIN CARD HEADER ====== */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+        isExpanded 
+          ? "sticky top-0 z-20 bg-[var(--md-sys-color-surface-container)]/98 backdrop-blur-md pb-3 pt-0.5 -mt-1 -mx-1 px-1 border-b border-[var(--md-sys-color-outline-variant)]/40" 
+          : ""
+      }`}>
         
         {/* LEFT SECTION: IHSG REAL-TIME/CLOSING PRICE */}
         <div className="flex items-center gap-3.5">
@@ -228,7 +236,7 @@ export default function ForeignExodusRadar() {
 
       {/* ====== COLLAPSIBLE DETAIL SECTION ====== */}
       {isExpanded && (
-        <div className="mt-6 pt-6 border-t border-[var(--md-sys-color-outline-variant)]/60 space-y-6 animate-fade-in">
+        <div className="mt-4 pt-4 space-y-6 animate-fade-in">
           
           {/* HEADER EXPLANATION */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
