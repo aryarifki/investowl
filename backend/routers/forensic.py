@@ -1,14 +1,17 @@
 """Market Forensics & Foreign Exodus Radar Router."""
 from __future__ import annotations
 
+import logging
 from typing import List, Dict, Any, Optional
 import pandas as pd
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
 from core.cache import TTLCache
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/forensic", tags=["Market Forensics"])
 forensic_cache = TTLCache(maxsize=32, ttl_seconds=300.0, redis_prefix="forensic")
@@ -61,10 +64,9 @@ def _evaluate_market_state(timeline: List[Dict[str, Any]]) -> str:
     if not timeline:
         return "NORMAL"
 
-    # Penyesuaian unit: jika data flow bernilai 10^9 (lembar saham dari prices), 1 unit = 1e9.
-    # Jika bernilai 10^12 (IDR), 1 unit = 1e12.
-    max_abs_flow = max((abs(r["daily_flow"]) for r in timeline), default=0.0)
-    unit = 1e9 if max_abs_flow < 1e11 else 1e12
+    # SQL query mengalikan volume dengan 1000 sehingga data selaras dalam Rupiah murni (IDR).
+    # 1 unit patokan = 1 Triliun IDR (1e12). Hardcoded untuk mencegah time bomb false crash saat pasar tenang.
+    unit = 1e12
 
     in_crash_mode = False
     consec_positive = 0
@@ -111,7 +113,8 @@ def _evaluate_market_state(timeline: List[Dict[str, Any]]) -> str:
             if has_conviction and (is_climactic_absorption or price_stabilizing):
                 state = "BOTTOMING"
                 in_crash_mode = False
-                cumulative_exodus = 0.0
+                # Gradual decay: pertahankan 30% memori krisis untuk mencegah amnesia false recovery
+                cumulative_exodus = cumulative_exodus * 0.3
             else:
                 state = "CRASH"
         elif in_crash_mode:
@@ -125,6 +128,9 @@ def _evaluate_market_state(timeline: List[Dict[str, Any]]) -> str:
         # Prioritas 4: NORMAL (Daily Net Flow > -1 unit)
         else:
             state = "NORMAL"
+
+        # Simpan status harian pada masing-masing data point timeline (UX improvement)
+        row["market_state"] = state
 
     return state
 
@@ -140,88 +146,101 @@ def get_foreign_exodus_radar(
     if cached_data is not None:
         return cached_data
 
-    # 1. Query Makro: IHSG Close dan True Foreign Net Flow (prices + idx_index_summary)
-    # Math: SUM(foreign_buy - foreign_sell) * 1000 (IDR). Aliran negatif = capital outflow (exodus).
-    q_macro = text("""
-        WITH latest_dates AS (
-            SELECT DISTINCT date FROM prices ORDER BY date DESC LIMIT :days
+    try:
+        # 1. Query Makro: IHSG Close dan True Foreign Net Flow (prices + idx_index_summary)
+        # Math: SUM(foreign_buy - foreign_sell) * 1000 (IDR). Aliran negatif = capital outflow (exodus).
+        q_macro = text("""
+            WITH latest_dates AS (
+                SELECT DISTINCT date FROM prices ORDER BY date DESC LIMIT :days
+            )
+            SELECT p.date,
+                   ROUND(s.close, 2) as ihsg_close,
+                   SUM(p.foreign_buy - p.foreign_sell) * 1000 as daily_flow
+            FROM prices p
+            JOIN latest_dates ld ON p.date = ld.date
+            LEFT JOIN idx_index_summary s ON p.date = s.date AND s.index_code = 'COMPOSITE'
+            GROUP BY p.date, s.close
+            ORDER BY p.date ASC
+        """)
+        rows = db.execute(q_macro, {"days": days}).fetchall()
+
+        timeline: List[Dict[str, Any]] = []
+        running_cumulative = 0.0
+
+        for r in rows:
+            d_flow = float(r.daily_flow) if r.daily_flow is not None else 0.0
+            running_cumulative += d_flow
+            ihsg_val = float(r.ihsg_close) if r.ihsg_close is not None else 0.0
+
+            timeline.append({
+                "date": str(r.date),
+                "ihsg_close": ihsg_val,
+                "daily_flow": d_flow,
+                "cumulative_flow": running_cumulative
+            })
+
+        # Forward-fill data IHSG yang 0/null (misal tanggal libur idx_index_summary)
+        last_valid_ihsg = 0.0
+        for item in timeline:
+            if item["ihsg_close"] > 0:
+                last_valid_ihsg = item["ihsg_close"]
+            elif last_valid_ihsg > 0:
+                item["ihsg_close"] = last_valid_ihsg
+
+        # Backward-fill jika tanggal awal timeline bernilai 0/null
+        last_valid_ihsg = 0.0
+        for item in reversed(timeline):
+            if item["ihsg_close"] > 0:
+                last_valid_ihsg = item["ihsg_close"]
+            elif last_valid_ihsg > 0:
+                item["ihsg_close"] = last_valid_ihsg
+
+        # Hitung IHSG terkini dan persentase perubahan harian
+        ihsg_current = timeline[-1]["ihsg_close"] if timeline else 0.0
+        ihsg_prev = timeline[-2]["ihsg_close"] if len(timeline) > 1 else ihsg_current
+        ihsg_change_pct = (
+            round(((ihsg_current - ihsg_prev) / ihsg_prev) * 100.0, 2)
+            if ihsg_prev > 0
+            else 0.0
         )
-        SELECT p.date,
-               ROUND(s.close, 2) as ihsg_close,
-               SUM(p.foreign_buy - p.foreign_sell) * 1000 as daily_flow
-        FROM prices p
-        JOIN latest_dates ld ON p.date = ld.date
-        LEFT JOIN idx_index_summary s ON p.date = s.date AND s.index_code = 'COMPOSITE'
-        GROUP BY p.date, s.close
-        ORDER BY p.date ASC
-    """)
-    rows = db.execute(q_macro, {"days": days}).fetchall()
 
-    timeline: List[Dict[str, Any]] = []
-    running_cumulative = 0.0
+        # 2. Hitung State Machine (sekaligus mengisi field 'market_state' di tiap row timeline)
+        market_state = _evaluate_market_state(timeline)
 
-    for r in rows:
-        d_flow = float(r.daily_flow) if r.daily_flow is not None else 0.0
-        running_cumulative += d_flow
-        ihsg_val = float(r.ihsg_close) if r.ihsg_close is not None else 0.0
+        # 3. Query Mikro: Top 5 Broker Asing dengan Net Sell Tertinggi (14 hari terakhir)
+        q_culprits = text("""
+            SELECT broker_code, SUM(net_value) as net_sell_idr
+            FROM broker_activity
+            WHERE (participant_type ILIKE '%asing%' OR broker_code IN ('ZP','AK','BK','RX','TP','KZ','YU','CS','CG','ML','MS','DB'))
+              AND net_value < 0 
+              AND date >= (SELECT MAX(date) - INTERVAL '14 days' FROM broker_activity)
+            GROUP BY broker_code
+            ORDER BY net_sell_idr ASC
+            LIMIT 5
+        """)
+        culprit_rows = db.execute(q_culprits).fetchall()
 
-        timeline.append({
-            "date": str(r.date),
-            "ihsg_close": ihsg_val,
-            "daily_flow": d_flow,
-            "cumulative_flow": running_cumulative
-        })
+        culprit_brokers: List[Dict[str, Any]] = []
+        for cr in culprit_rows:
+            code = str(cr.broker_code).strip().upper()
+            name = BROKER_NAME_MAP.get(code, f"Broker {code}")
+            culprit_brokers.append({
+                "broker_code": code,
+                "broker_name": name,
+                "net_sell_idr": float(cr.net_sell_idr) if cr.net_sell_idr is not None else 0.0
+            })
 
-    # Jika ada data yang ihsg_close-nya 0/null (misal tanggal libur idx_index_summary), forward fill
-    last_valid_ihsg = 0.0
-    for item in timeline:
-        if item["ihsg_close"] > 0:
-            last_valid_ihsg = item["ihsg_close"]
-        elif last_valid_ihsg > 0:
-            item["ihsg_close"] = last_valid_ihsg
+        result = {
+            "market_state": market_state,
+            "ihsg_current": ihsg_current,
+            "ihsg_change_pct": ihsg_change_pct,
+            "timeline": timeline,
+            "culprit_brokers": culprit_brokers
+        }
 
-    # Hitung IHSG terkini dan persentase perubahan harian
-    ihsg_current = timeline[-1]["ihsg_close"] if timeline else 0.0
-    ihsg_prev = timeline[-2]["ihsg_close"] if len(timeline) > 1 else ihsg_current
-    ihsg_change_pct = (
-        round(((ihsg_current - ihsg_prev) / ihsg_prev) * 100.0, 2)
-        if ihsg_prev > 0
-        else 0.0
-    )
+        forensic_cache.set(cache_key, result)
+        return result
 
-    # 2. Hitung State Machine
-    market_state = _evaluate_market_state(timeline)
-
-    # 3. Query Mikro: Top 5 Broker Asing dengan Net Sell Tertinggi (14 hari terakhir)
-    q_culprits = text("""
-        SELECT broker_code, SUM(net_value) as net_sell_idr
-        FROM broker_activity
-        WHERE participant_type ILIKE '%asing%' 
-          AND net_value < 0 
-          AND date >= (SELECT MAX(date) - INTERVAL '14 days' FROM broker_activity)
-        GROUP BY broker_code
-        ORDER BY net_sell_idr ASC
-        LIMIT 5
-    """)
-    culprit_rows = db.execute(q_culprits).fetchall()
-
-    culprit_brokers: List[Dict[str, Any]] = []
-    for cr in culprit_rows:
-        code = str(cr.broker_code).strip().upper()
-        name = BROKER_NAME_MAP.get(code, f"Broker {code}")
-        culprit_brokers.append({
-            "broker_code": code,
-            "broker_name": name,
-            "net_sell_idr": float(cr.net_sell_idr) if cr.net_sell_idr is not None else 0.0
-        })
-
-    result = {
-        "market_state": market_state,
-        "ihsg_current": ihsg_current,
-        "ihsg_change_pct": ihsg_change_pct,
-        "timeline": timeline,
-        "culprit_brokers": culprit_brokers
-    }
-
-    forensic_cache.set(cache_key, result)
-    return result
+    except Exception as e:
+        logger.error(f"Error executing get_foreign_exodus_radar: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate foreign exodus radar: {str(e)}")

@@ -29,6 +29,8 @@ def test_foreign_exodus_radar_endpoint():
     assert "ihsg_close" in first_item
     assert "daily_flow" in first_item
     assert "cumulative_flow" in first_item
+    assert "market_state" in first_item
+    assert first_item["market_state"] in ["NORMAL", "WARNING", "CRASH", "BOTTOMING"]
 
     # Culprit brokers validation
     assert "culprit_brokers" in data
