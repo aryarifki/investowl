@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Dict, Any, Optional
-import pandas as pd
+from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -15,6 +14,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/forensic", tags=["Market Forensics"])
 forensic_cache = TTLCache(maxsize=32, ttl_seconds=300.0, redis_prefix="forensic")
+
+
+@router.post("/refresh")
+def refresh_forensic_cache() -> Dict[str, Any]:
+    """Invalidasi seluruh cache forensic/radar agar data langsung sinkron dengan ingest terbaru."""
+    forensic_cache.clear()
+    return {"status": "ok", "message": "Forensic cache cleared successfully."}
+
 
 # Kamus pemetaan kode broker asing ke nama institusi
 BROKER_NAME_MAP: Dict[str, str] = {

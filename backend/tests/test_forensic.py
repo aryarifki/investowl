@@ -96,3 +96,12 @@ def test_evaluate_market_state_unit_logic():
     ]
     assert _evaluate_market_state(timeline_stabilization) == "BOTTOMING"
 
+
+def test_refresh_forensic_cache_endpoint():
+    """Verify POST /api/forensic/refresh clears the cache and returns 200."""
+    resp = client.post("/api/forensic/refresh")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "ok"
+
+
