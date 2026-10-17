@@ -26,6 +26,7 @@ interface TimelinePoint {
   ihsg_close: number;
   daily_flow: number;
   cumulative_flow: number;
+  market_state?: "NORMAL" | "WARNING" | "CRASH" | "BOTTOMING";
 }
 
 interface CulpritBroker {
@@ -436,6 +437,7 @@ export default function ForeignExodusRadar() {
                   <thead className="sticky top-0 bg-[var(--md-sys-color-surface-container-high)] text-[10px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] border-b border-[var(--md-sys-color-outline-variant)]">
                     <tr>
                       <th className="py-2 px-3">Tanggal</th>
+                      <th className="py-2 px-2 text-center">Status</th>
                       <th className="py-2 px-3 text-right">IHSG</th>
                       <th className="py-2 px-3 text-right">Net Flow Asing</th>
                       <th className="py-2 px-3 text-right">Kumulatif</th>
@@ -446,6 +448,20 @@ export default function ForeignExodusRadar() {
                       <tr key={row.date} className="hover:bg-[var(--md-sys-color-surface-container)] transition-colors">
                         <td className="py-2 px-3 font-medium text-[var(--md-sys-color-on-surface)]">
                           {row.date}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {row.market_state === "CRASH" && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">CRASH</span>
+                          )}
+                          {row.market_state === "BOTTOMING" && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">BOTTOM</span>
+                          )}
+                          {row.market_state === "WARNING" && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">WARN</span>
+                          )}
+                          {(!row.market_state || row.market_state === "NORMAL") && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]">NORM</span>
+                          )}
                         </td>
                         <td className="py-2 px-3 text-right font-semibold text-[#38bdf8]">
                           {row.ihsg_close.toLocaleString("id-ID")}
